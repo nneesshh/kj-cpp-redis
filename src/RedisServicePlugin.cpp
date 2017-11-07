@@ -4,14 +4,6 @@
 //------------------------------------------------------------------------------
 #include "RedisService.h"
 
-#ifdef _WIN32
-#pragma comment(lib, "WS2_32.Lib")
-#pragma comment(lib, "DbgHelp.Lib")
-#pragma comment(lib, "WinMM.Lib")
-#pragma comment(lib, "Version.Lib")
-#pragma comment(lib, "ShLwApi.Lib")
-#endif
-
 #ifdef _MSC_VER
 #ifdef _DEBUG
 #define new   new(_NORMAL_BLOCK, __FILE__,__LINE__)

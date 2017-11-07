@@ -53,6 +53,11 @@ public:
 	//! commit pipelined transaction
 	KjRedisConnection& Commit();
 
+	//! queued cmd size
+	size_t UncommittedSize() {
+		return _rscmds.size();
+	}
+
 private:
 	//! 
 	void taskFailed(kj::Exception&& exception) override {

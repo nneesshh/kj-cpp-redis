@@ -4,6 +4,8 @@
 //------------------------------------------------------------------------------
 #include "KjTcpClient.hpp"
 
+#include <assert.h>
+
 #pragma push_macro("ERROR")
 #undef ERROR
 #pragma push_macro("VOID")
@@ -93,7 +95,7 @@ KjTcpClient::Disconnect() {
 	if (IsConnected()) {
 		_bIsConnected = false;
 
-		// return reserved space
+		// clear reservation space
 		bip_buf_commit(_bbuf, 0);
 
 		if (_connAttach._disconnectCb) {
@@ -114,6 +116,10 @@ KjTcpClient::StartReadOp(READ_CB readCb) {
 	_connAttach._readCb = readCb;
 	return AsyncReadLoop()
 		.catch_([this](kj::Exception&& exception) {
+
+		// clear reservation space
+		bip_buf_commit(_bbuf, 0);
+
 		if (IsConnected()) {
 			_bIsConnected = false;
 			if (_connAttach._disconnectCb) {
@@ -156,7 +162,7 @@ KjTcpClient::Reconnect() {
 		_bIsReconnecting = true;
 		printf("reconnect after (%d) seconds...\n", uDelaySeconds);
 
-		return _tioContext->AfterDelay(uDelaySeconds * kj::NANOSECONDS, "reconnect")
+		return _tioContext->AfterDelay(uDelaySeconds * kj::SECONDS, "reconnect")
 			.then([this]() {
 			_bIsReconnecting = false;
 			return StartConnect();
@@ -174,6 +180,9 @@ KjTcpClient::AsyncReadLoop() {
 	size_t szreserved = _connAttach._readSize;
 	char *bufbase = bip_buf_force_reserve(_bbuf, &szreserved);
 	int buflen = szreserved;
+
+	assert(nullptr != bufbase);
+
 	return _stream->read(bufbase, 1, buflen)
 		.then([this](size_t amount) {
 		//

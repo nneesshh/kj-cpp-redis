@@ -34,3 +34,8 @@
 /build/redisservice.dir/obj/Debug/redisservice.tlog/CL.command.1.tlog
 *.tlog
 *.log
+*.suo
+*.sln
+/bin/Debug/redisservice_example.ilk
+/bin/Debug/redisservice_example.pdb
+/build/redisservice_example.dir/obj/Debug/vc140.pdb

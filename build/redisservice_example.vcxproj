@@ -75,26 +75,26 @@
     <ClCompile Include="..\src\io\KjSimpleThreadIoContext.cpp" />
     <ClCompile Include="..\src\io\KjTcpClient.cpp" />
     <ClCompile Include="..\src\io\RedisTrunkQueue.cpp" />
+    <ClCompile Include="..\src\redisservice_examle.cpp" />
     <ClCompile Include="..\src\RedisService.cpp" />
-    <ClCompile Include="..\src\RedisServicePlugin.cpp" />
     <ClCompile Include="..\src\UsingKjCppRedis.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{95830A70-A9E4-4556-9073-93D6D22E7CFD}</ProjectGuid>
+    <ProjectGuid>{F82DA110-3B28-469F-8BDF-231EF3007558}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>SgServer</RootNamespace>
-    <ProjectName>redisservice</ProjectName>
+    <ProjectName>redisservice_example</ProjectName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <PlatformToolset>v140</PlatformToolset>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <PlatformToolset>v140</PlatformToolset>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
   </PropertyGroup>
