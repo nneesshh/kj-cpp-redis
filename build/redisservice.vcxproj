@@ -107,12 +107,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>$(ProjectName)</TargetName>
     <IncludePath>C:\Program Files (x86)\Windows Kits\8.1\Include\shared;$(IncludePath)</IncludePath>
-    <OutDir>..\bin\$(Configuration)\</OutDir>
+    <OutDir>..\..\..\bin_sandbox\$(Configuration)\</OutDir>
     <IntDir>$(ProjectName).dir\obj\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>C:\Program Files (x86)\Windows Kits\8.1\Include\shared;$(IncludePath)</IncludePath>
-    <OutDir>..\bin\$(Configuration)\</OutDir>
+    <OutDir>..\..\..\bin_sandbox\$(Configuration)\</OutDir>
     <IntDir>$(ProjectName).dir\obj\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

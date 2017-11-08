@@ -32,9 +32,9 @@ public:
 	CKjRedisWorkQueue(redis_stub_param_t& param);
 	~CKjRedisWorkQueue();
 
-	using CallbackEntry = std::tuple<IRedisService::cmd_t>;
+	using CallbackEntry = IRedisService::cmd_t;
 
-	bool						Add(IRedisService::cmd_t& cmd);
+	bool						Add(IRedisService::cmd_t&& cmd);
 
 	bool						IsDone() {
 		return _done;
@@ -63,6 +63,8 @@ private:
 public:
 	char _opCodeSend = 0;
 	char _opCodeRecv = 0;
+
+	CallbackEntry _opCmd;
 
 };
 using CKjRedisWorkQueuePtr = std::shared_ptr<CKjRedisWorkQueue>;

@@ -27,7 +27,7 @@ class IRedisService {
 public:
 	virtual ~IRedisService() {};
 
-	using reply_cb_t = std::function<void(CRedisReply&)>;
+	using reply_cb_t = std::function<void(CRedisReply&&)>;
 	using dispose_cb_t = std::function<void()>;
 
 	struct cmd_t {

@@ -29,9 +29,8 @@ void
 CCamelWorkQueue::RunOnce() {
 	// work queue
 	int nCount = 0;
-	CallbackEntry entry;
-	while (!_close && _callbacks.try_dequeue(entry)) {
-		auto& workCb = std::get<0>(entry);
+	CallbackEntry workCb;
+	while (!_close && _callbacks.try_dequeue(workCb)) {
 		workCb();
 
 		//
@@ -56,7 +55,7 @@ CCamelWorkQueue::Close() {
 
 */
 bool
-CCamelWorkQueue::Add(std::function<void()> workCb) {
+CCamelWorkQueue::Add(std::function<void()>&& workCb) {
 	if (_close) {
 		// error
 		fprintf(stderr, "[CCamelWorkQueue::Add()] can't enqueue, callback is dropped!!!");
@@ -66,8 +65,7 @@ CCamelWorkQueue::Add(std::function<void()> workCb) {
 	//
 	// Add work item.
 	//
-	CallbackEntry entry = std::make_tuple(std::move(workCb));
-	if (!_callbacks.enqueue(std::move(entry))) {
+	if (!_callbacks.enqueue(std::move(workCb))) {
 		// error
 		fprintf(stderr, "[CCamelWorkQueue::Add()] enqueue failed, callback is dropped!!!");
 		return false;

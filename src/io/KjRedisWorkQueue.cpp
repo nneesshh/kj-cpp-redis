@@ -29,14 +29,12 @@ read_pipe_loop(CKjRedisWorkQueue& q, redis_thread_worker_t& worker, kj::AsyncIoS
 			//
 			// Get next work item.
 			//
-			int nCount = 0;
 			int nCmdSn = 0;
-			CKjRedisWorkQueue::CallbackEntry entry;
-			while (q.Callbacks().try_dequeue(entry)) {
-				auto& cmd = std::get<0>(entry);
-				worker._conn->Send(cmd);
+			int nCount = 0;
+			while (q.Callbacks().try_dequeue(q._opCmd)) {
+				nCmdSn = q._opCmd._sn;
+				worker._conn->Send(q._opCmd);
 				++nCount;
-				nCmdSn = cmd._sn;
 			}
 
 			if (nCount > 0) {
@@ -78,7 +76,7 @@ CKjRedisWorkQueue::~CKjRedisWorkQueue() {
 
 */
 bool
-CKjRedisWorkQueue::Add(IRedisService::cmd_t& cmd) {
+CKjRedisWorkQueue::Add(IRedisService::cmd_t&& cmd) {
 
 	if (_done) {
 		// error
@@ -89,8 +87,7 @@ CKjRedisWorkQueue::Add(IRedisService::cmd_t& cmd) {
 	//
 	// Add work item.
 	//
-	CallbackEntry entry = std::make_tuple(std::move(cmd));
-	if (!_callbacks.enqueue(std::move(entry))) {
+	if (!_callbacks.enqueue(std::move(cmd))) {
 		// error
 		fprintf(stderr, "[CKjRedisWorkQueue::Add()] enqueue failed, callback is dropped!!!");
 		return false;

@@ -118,7 +118,7 @@ KjRedisConnection::OnClientReceive(KjTcpClient& kjclient, bip_buf_t& bbuf) {
 
 				//
 				if (cmd._reply_cb)
-					cmd._reply_cb(reply);
+					cmd._reply_cb(std::move(reply));
 
 				//
 				if (cmd._dispose_cb)

@@ -19,12 +19,12 @@ public:
 	CCamelWorkQueue();
 	~CCamelWorkQueue();
 
-	using CallbackEntry = std::tuple<std::function<void()>>;
+	using CallbackEntry = std::function<void()>;
 
 	void RunOnce();
 	void Close();
 
-	bool Add(std::function<void()> workCb);
+	bool Add(std::function<void()>&& workCb);
 
 private:
 	bool _close = false;

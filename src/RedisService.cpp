@@ -55,10 +55,10 @@ CRedisService::Send(const std::vector<std::string>& vPiece) {
 
 */
 void
-CRedisService::Commit(const reply_cb_t& reply_cb) {
-	reply_cb_t func = std::bind([this](reply_cb_t& reply_cb, CRedisReply& r) {
-		_trunkQueue->Add(reply_cb, std::move(r));
-	}, std::move(reply_cb), std::placeholders::_1);
+CRedisService::Commit(const reply_cb_t& cb) {
+	reply_cb_t func = std::bind([this](reply_cb_t& reply_cb, CRedisReply& reply) {
+		_trunkQueue->Add(std::move(reply_cb), std::move(reply));
+	}, std::move(cb), std::placeholders::_1);
 
 	cmd_t cmd;
 
@@ -76,7 +76,7 @@ CRedisService::Commit(const reply_cb_t& reply_cb) {
 	cmd._dispose_cb = nullptr;
 	cmd._state = cmd_t::REDIS_CMD_STATE_QUEUEING;
 
-	_workQueue->Add(cmd);
+	_workQueue->Add(std::move(cmd));
 	_allCommands.resize(0);
 	_builtNum = 0;
 }
@@ -113,7 +113,7 @@ CRedisService::BlockingCommit() {
 	cmd._dispose_cb = std::move(dispose_cb);
 	cmd._state = cmd_t::REDIS_CMD_STATE_QUEUEING;
 
-	_workQueue->Add(cmd);
+	_workQueue->Add(std::move(cmd));
 	_allCommands.resize(0);
 	_builtNum = 0;
 

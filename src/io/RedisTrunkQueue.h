@@ -25,7 +25,7 @@ public:
 		_workQueue->Close();
 	}
 
-	void Add(IRedisService::reply_cb_t&, CRedisReply&);
+	void Add(IRedisService::reply_cb_t&&, CRedisReply&&);
 
 private:
 	CCamelWorkQueuePtr _workQueue;
