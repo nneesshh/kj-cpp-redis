@@ -32,9 +32,9 @@ public:
 	CKjRedisWorkQueue(redis_stub_param_t& param);
 	~CKjRedisWorkQueue();
 
-	using CallbackEntry = IRedisService::cmd_t;
+	using CallbackEntry = IRedisService::cmd_pipepline_t;
 
-	bool						Add(IRedisService::cmd_t&& cmd);
+	bool						Add(IRedisService::cmd_pipepline_t&& cmd);
 
 	bool						IsDone() {
 		return _done;

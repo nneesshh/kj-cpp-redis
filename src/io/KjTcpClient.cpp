@@ -67,9 +67,13 @@ KjTcpClient::Connect(
 	_connAttach._connectCb = connectCb;
 	_connAttach._disconnectCb = disconnectCb;
 
+	fprintf(stderr, "[KjTcpClient::Connect()] parse address, host(%s)port(%d)...\n",
+		host.cStr(), port);
 	auto p1 = _tioContext->GetNetwork().parseAddress(host, port)
 		.then([this](kj::Own<kj::NetworkAddress>&& addr) {
 		_addr = kj::mv(addr);
+
+		fprintf(stderr, "[KjTcpClient::Connect() -- parseAddress()] start connect...\n");
 		return StartConnect();
 	}).exclusiveJoin(_disconnectPromise.addBranch());
 	return kj::mv(p1);
@@ -93,17 +97,13 @@ KjTcpClient::Write(const void* buffer, size_t size) {
 void
 KjTcpClient::Disconnect() {
 	if (IsConnected()) {
-		_bIsConnected = false;
+		//
+		OnDisconnect();
 
-		// clear reservation space
-		bip_buf_commit(_bbuf, 0);
-
-		if (_connAttach._disconnectCb) {
-			_connAttach._disconnectCb(*this, _connid);
-		}
-
-		_disconnectFulfiller->fulfill();
+		//
+		_stream->abortRead();
 		_stream->shutdownWrite();
+		_disconnectFulfiller->fulfill();
 	}
 }
 
@@ -115,19 +115,7 @@ kj::Promise<void>
 KjTcpClient::StartReadOp(READ_CB readCb) {
 	_connAttach._readCb = readCb;
 	return AsyncReadLoop()
-		.catch_([this](kj::Exception&& exception) {
-
-		// clear reservation space
-		bip_buf_commit(_bbuf, 0);
-
-		if (IsConnected()) {
-			_bIsConnected = false;
-			if (_connAttach._disconnectCb) {
-				_connAttach._disconnectCb(*this, _connid);
-			}
-		}
-		return Reconnect();
-	}).exclusiveJoin(_disconnectPromise.addBranch());
+		.exclusiveJoin(_disconnectPromise.addBranch());
 }
 
 //------------------------------------------------------------------------------
@@ -137,13 +125,13 @@ KjTcpClient::StartReadOp(READ_CB readCb) {
 kj::Promise<void>
 KjTcpClient::StartConnect() {
 	return _addr->connect()
-		.then(
-			[this](kj::Own<kj::AsyncIoStream>&& stream) {
-
-		_bIsConnected = true;
+		.then([this](kj::Own<kj::AsyncIoStream>&& stream) {
 
 		_stream = kj::mv(stream);
+		_bIsConnected = true;
 		
+		fprintf(stderr, "[KjTcpClient::StartConnect() -- then()] call connectCb...\n");
+
 		if (_connAttach._connectCb) {
 			_connAttach._connectCb(*this, _connid);
 		}
@@ -160,11 +148,12 @@ KjTcpClient::Reconnect() {
 
 	if (!_bIsReconnecting) {
 		_bIsReconnecting = true;
-		printf("reconnect after (%d) seconds...\n", uDelaySeconds);
+		fprintf(stderr, "[KjTcpClient::Reconnect()] reconnect after (%d) seconds...\n", uDelaySeconds);
 
 		return _tioContext->AfterDelay(uDelaySeconds * kj::SECONDS, "reconnect")
 			.then([this]() {
 			_bIsReconnecting = false;
+			fprintf(stderr, "[KjTcpClient::Reconnect() -- AfterDelay()] start reconnect...\n");
 			return StartConnect();
 		});
 	}

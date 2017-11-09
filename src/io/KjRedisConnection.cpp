@@ -41,15 +41,17 @@ KjRedisConnection::~KjRedisConnection() {
 
 */
 void
-KjRedisConnection::OnClientConnect(KjTcpClient& kjclient, uint64_t connid) {
+KjRedisConnection::OnClientConnect(KjTcpClient&, uint64_t connid) {
 	// start read
-	auto p1 = kjclient.StartReadOp(
+	auto p1 = _kjclient.StartReadOp(
 		std::bind(&KjRedisConnection::OnClientReceive,
 			this,
 			std::placeholders::_1,
-			std::placeholders::_2));
-
-	_tasks->add(kj::mv(p1), "startreadop");
+			std::placeholders::_2)
+	).catch_([this](kj::Exception&& exception) {
+		OnClientError(_kjclient, kj::mv(exception));
+	});
+	_tasks->add(kj::mv(p1), "kjclient start read op");
 }
 
 //------------------------------------------------------------------------------
@@ -57,7 +59,7 @@ KjRedisConnection::OnClientConnect(KjTcpClient& kjclient, uint64_t connid) {
 
 */
 void
-KjRedisConnection::OnClientDisconnect(KjTcpClient& kjclient, uint64_t connid) {
+KjRedisConnection::OnClientDisconnect(KjTcpClient&, uint64_t connid) {
 
 }
 
@@ -66,7 +68,7 @@ KjRedisConnection::OnClientDisconnect(KjTcpClient& kjclient, uint64_t connid) {
 
 */
 void
-KjRedisConnection::OnClientReceive(KjTcpClient& kjclient, bip_buf_t& bbuf) {
+KjRedisConnection::OnClientReceive(KjTcpClient&, bip_buf_t& bbuf) {
 
 	try {
 		_builder.ProcessInput(bbuf);
@@ -88,8 +90,8 @@ KjRedisConnection::OnClientReceive(KjTcpClient& kjclient, bip_buf_t& bbuf) {
 			throw CRedisError(sDesc.c_str());
 		}
 		
-		if (_sending_num <= 0
-			|| _rscmds.size() <= 0) {
+		if (_committing_num <= 0
+			|| _rscps.size() <= 0) {
 
 			std::string sDesc = "[got reply but cmd is discarded!!!] ";
 			fprintf(stderr, sDesc.c_str());
@@ -98,35 +100,35 @@ KjRedisConnection::OnClientReceive(KjTcpClient& kjclient, bip_buf_t& bbuf) {
 		}
 
 		{
-			auto& cmd = _rscmds.front();
-			if (IRedisService::cmd_t::REDIS_CMD_STATE_SENDING == cmd._state) {
-				cmd._state = IRedisService::cmd_t::REDIS_CMD_STATE_PROCESSING;
-				++cmd._processed_num;
+			auto& cp = _rscps.front();
+			if (IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_COMMITING == cp._state) {
+				cp._state = IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_PROCESSING;
+				++cp._processed_num;
 			}
-			else if (IRedisService::cmd_t::REDIS_CMD_STATE_PROCESSING == cmd._state) {
-				++cmd._processed_num;
+			else if (IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_PROCESSING == cp._state) {
+				++cp._processed_num;
 			}
 			else {
-				std::string sDesc = "cmd is corrupted!!!";
+				std::string sDesc = "cmd pipeline is corrupted!!!";
 				fprintf(stderr, sDesc.c_str());
 				system("pause");
 				throw CRedisError(sDesc.c_str());
 			}
 
-			if (cmd._processed_num >= cmd._built_num) {
-				cmd._state = IRedisService::cmd_t::REDIS_CMD_STATE_PROCESS_OVER;
+			if (cp._processed_num >= cp._built_num) {
+				cp._state = IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_PROCESS_OVER;
 
 				//
-				if (cmd._reply_cb)
-					cmd._reply_cb(std::move(reply));
+				if (cp._reply_cb)
+					cp._reply_cb(std::move(reply));
 
 				//
-				if (cmd._dispose_cb)
-					cmd._dispose_cb();
+				if (cp._dispose_cb)
+					cp._dispose_cb();
 
 				//
-				_rscmds.pop_front();
-				--_sending_num;
+				_rscps.pop_front();
+				--_committing_num;
 			}
 		}
 
@@ -140,9 +142,29 @@ KjRedisConnection::OnClientReceive(KjTcpClient& kjclient, bip_buf_t& bbuf) {
 
 */
 void
+KjRedisConnection::OnClientError(KjTcpClient&, kj::Exception&& exception) {
+	//
+	taskFailed(kj::mv(exception));
+
+	// recommit
+	for (auto& cmd : _rscps) {
+		// recover sending state
+		if (IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_COMMITING == cmd._state) {
+			cmd._state = IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING;
+			--_committing_num;
+		}
+	}
+	Commit();
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+void
 KjRedisConnection::Open(redis_stub_param_t& param) {
 	Connect(param._ip, param._port, [](KjRedisConnection& ) {
-		printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!disconnected");
+		fprintf(stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!disconnected");
 	});
 
 }
@@ -170,8 +192,8 @@ KjRedisConnection::Connect(
 		host,
 		port,
 		std::bind(&KjRedisConnection::OnClientConnect, this, std::placeholders::_1, std::placeholders::_2),
-		std::bind(&KjRedisConnection::OnClientDisconnect, this, std::placeholders::_1, std::placeholders::_2));
-
+		std::bind(&KjRedisConnection::OnClientDisconnect, this, std::placeholders::_1, std::placeholders::_2)
+	);
 	_tasks->add(kj::mv(p1), "kjclient connect");
 
 	_disconnection_handler = disconnection_handler;
@@ -183,40 +205,27 @@ KjRedisConnection::Connect(
 */
 void
 KjRedisConnection::Disconnect() {
-	
 	_kjclient.Disconnect();
 }
 
 //------------------------------------------------------------------------------
 /**
-
+//! commit loop
 */
-bool
-KjRedisConnection::IsConnected() {
-	return _kjclient.IsConnected();
-}
-
-//------------------------------------------------------------------------------
-/**
-
-*/
-KjRedisConnection&
-KjRedisConnection::Send(IRedisService::cmd_t& cmd) {
-	cmd._state = IRedisService::cmd_t::REDIS_CMD_STATE_QUEUEING;
-	_rscmds.push_back(std::move(cmd));
-	return *this;
-}
-
-//------------------------------------------------------------------------------
-/**
-//! commit pipelined transaction
-*/
-KjRedisConnection&
-KjRedisConnection::Commit() {
-	if (_rscmds.size() > 0) {
-		_tasks->add(CommitLoop(), "commit loop");
+kj::Promise<void>
+KjRedisConnection::AutoReconnect() {
+	// recommit
+	for (auto& cmd : _rscps) {
+		// recover sending state
+		if (IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_COMMITING == cmd._state) {
+			cmd._state = IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING;
+			--_committing_num;
+		}
 	}
-	return *this;
+	Commit();
+
+	// process connection error
+	return _kjclient.AutoReconnect();
 }
 
 //------------------------------------------------------------------------------
@@ -226,13 +235,13 @@ KjRedisConnection::Commit() {
 kj::Promise<void>
 KjRedisConnection::CommitLoop() {
 	if (IsConnected()) {
-		for (auto& cmd : _rscmds) {
-			if (IRedisService::cmd_t::REDIS_CMD_STATE_QUEUEING == cmd._state) {
+		for (auto& cmd : _rscps) {
+			if (IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING == cmd._state) {
 
 				_tasks->add(_kjclient.Write(cmd._commands.c_str(), cmd._commands.length()), "kjclient write commands");
 				
-				cmd._state = IRedisService::cmd_t::REDIS_CMD_STATE_SENDING;
-				++_sending_num;
+				cmd._state = IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_COMMITING;
+				++_committing_num;
 			}
 		}
 		

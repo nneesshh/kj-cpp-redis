@@ -60,7 +60,7 @@ CRedisService::Commit(const reply_cb_t& cb) {
 		_trunkQueue->Add(std::move(reply_cb), std::move(reply));
 	}, std::move(cb), std::placeholders::_1);
 
-	cmd_t cmd;
+	cmd_pipepline_t cp;
 
 #ifdef _DEBUG
 	if (_builtNum <= 0) {
@@ -68,15 +68,15 @@ CRedisService::Commit(const reply_cb_t& cb) {
 	}
 #endif
 
-	cmd._sn = ++_nextSn;
-	cmd._commands.append(_allCommands);
-	cmd._built_num = _builtNum;
-	cmd._processed_num = 0;
-	cmd._reply_cb = std::move(func);
-	cmd._dispose_cb = nullptr;
-	cmd._state = cmd_t::REDIS_CMD_STATE_QUEUEING;
+	cp._sn = ++_nextSn;
+	cp._commands.append(_allCommands);
+	cp._built_num = _builtNum;
+	cp._processed_num = 0;
+	cp._reply_cb = std::move(func);
+	cp._dispose_cb = nullptr;
+	cp._state = cmd_pipepline_t::CMD_PIPELINE_STATE_QUEUEING;
 
-	_workQueue->Add(std::move(cmd));
+	_workQueue->Add(std::move(cp));
 	_allCommands.resize(0);
 	_builtNum = 0;
 }
@@ -97,7 +97,7 @@ CRedisService::BlockingCommit() {
 		prms->set_value();
 	});
 
-	cmd_t cmd;
+	cmd_pipepline_t cp;
 
 #ifdef _DEBUG
 	if (_builtNum <= 0) {
@@ -105,15 +105,15 @@ CRedisService::BlockingCommit() {
 	}
 #endif
 
-	cmd._sn = ++_nextSn;
-	cmd._commands.append(_allCommands);
-	cmd._built_num = _builtNum;
-	cmd._processed_num = 0;
-	cmd._reply_cb = std::move(func);
-	cmd._dispose_cb = std::move(dispose_cb);
-	cmd._state = cmd_t::REDIS_CMD_STATE_QUEUEING;
+	cp._sn = ++_nextSn;
+	cp._commands.append(_allCommands);
+	cp._built_num = _builtNum;
+	cp._processed_num = 0;
+	cp._reply_cb = std::move(func);
+	cp._dispose_cb = std::move(dispose_cb);
+	cp._state = cmd_pipepline_t::CMD_PIPELINE_STATE_QUEUEING;
 
-	_workQueue->Add(std::move(cmd));
+	_workQueue->Add(std::move(cp));
 	_allCommands.resize(0);
 	_builtNum = 0;
 

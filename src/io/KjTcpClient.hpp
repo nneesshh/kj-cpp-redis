@@ -10,6 +10,7 @@ public:
 	using READ_CB = std::function<void(KjTcpClient&, bip_buf_t&)>;
 	using CONNECT_CB = std::function<void(KjTcpClient&, uint64_t)>;
 	using DISCONNECT_CB = std::function<void(KjTcpClient&, uint64_t)>;
+	using ERROR_CB = std::function<void(KjTcpClient&, kj::Exception&& exception)>;
 
 	struct conn_attach_t {
 		std::size_t _readSize;
@@ -54,7 +55,14 @@ public:
 
 	//! 
 	kj::Promise<void> DelayReconnect() {
-		OnDisconnect();
+		if (IsConnected()) {
+			OnDisconnect();
+		}
+		return Reconnect();
+	}
+
+	//!
+	kj::Promise<void> AutoReconnect() {
 		return Reconnect();
 	}
 
@@ -66,16 +74,13 @@ private:
 
 	//!
 	void OnDisconnect() {
+		_bIsConnected = false;
 
-		if (IsConnected()) {
-			_bIsConnected = false;
+		// return reserved space
+		bip_buf_commit(_bbuf, 0);
 
-			// return reserved space
-			bip_buf_commit(_bbuf, 0);
-
-			if (_connAttach._disconnectCb)
-				_connAttach._disconnectCb(*this, _connid);
-		}
+		if (_connAttach._disconnectCb)
+			_connAttach._disconnectCb(*this, _connid);
 	}
 
 public:

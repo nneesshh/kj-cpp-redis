@@ -35,6 +35,8 @@ public:
 	virtual void OnClientDisconnect(KjTcpClient&, uint64_t);
 	virtual void OnClientReceive(KjTcpClient&, bip_buf_t& bbuf);
 
+	virtual void OnClientError(KjTcpClient&, kj::Exception&& exception);
+
 public:
 	void Open(redis_stub_param_t& param);
 	void Close();
@@ -45,25 +47,39 @@ public:
 		const disconnection_handler_t& disconnection_handler = nullptr);
 
 	void Disconnect();
-	bool IsConnected();
+	bool IsConnected() {
+		return _kjclient.IsConnected();
+	}
 
 	//! send cmd
-	KjRedisConnection& Send(IRedisService::cmd_t& cmd);
+	KjRedisConnection& Send(IRedisService::cmd_pipepline_t& cp) {
+		cp._state = IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING;
+		_rscps.push_back(std::move(cp));
+		return *this;
+	}
 
 	//! commit pipelined transaction
-	KjRedisConnection& Commit();
+	KjRedisConnection& Commit() {
+		if (_rscps.size() > 0) {
+			_tasks->add(CommitLoop(), "commit loop");
+		}
+		return *this;
+	}
 
 	//! queued cmd size
 	size_t UncommittedSize() {
-		return _rscmds.size();
+		return _rscps.size();
 	}
 
 private:
 	//! 
 	void taskFailed(kj::Exception&& exception) override {
-		fprintf(stderr, "[KjRedisConnection::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
+		fprintf(stderr, "[KjRedisConnection::taskFailed()] desc(%s) -- goto delay reconnect.\n", exception.getDescription().cStr());
 		_tasks->add(_kjclient.DelayReconnect(), "kjclient delay reconnect");
 	}
+
+	//! 
+	kj::Promise<void> AutoReconnect();
 
 	//! 
 	kj::Promise<void> CommitLoop();
@@ -75,7 +91,7 @@ private:
 	KjTcpClient _kjclient;
 
 	//! redis service cmds need to be commit
-	std::deque<IRedisService::cmd_t> _rscmds;
+	std::deque<IRedisService::cmd_pipepline_t> _rscps;
 
 	//! user defined disconnection handler
 	disconnection_handler_t _disconnection_handler = nullptr;
@@ -83,7 +99,7 @@ private:
 	//! reply builder
 	cpp_redis::builders::KjReplyBuilder _builder;
 
-	int _sending_num = 0;
+	int _committing_num = 0;
 };
 
 /*EOF*/

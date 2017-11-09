@@ -38,3 +38,6 @@
 *.sln
 *.pdb
 *.user
+*.ilk
+*.db
+*.opendb

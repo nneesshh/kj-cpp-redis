@@ -30,12 +30,13 @@ public:
 	using reply_cb_t = std::function<void(CRedisReply&&)>;
 	using dispose_cb_t = std::function<void()>;
 
-	struct cmd_t {
-		enum REDIS_CMD_STATE {
-			REDIS_CMD_STATE_QUEUEING = 1,
-			REDIS_CMD_STATE_SENDING = 2,
-			REDIS_CMD_STATE_PROCESSING = 3,
-			REDIS_CMD_STATE_PROCESS_OVER = 4,
+	struct cmd_pipepline_t {
+		enum CMD_PIPELINE_STATE {
+			CMD_PIPELINE_STATE_QUEUEING = 1,
+			CMD_PIPELINE_STATE_SENDING = 2,
+			CMD_PIPELINE_STATE_COMMITING = 3,
+			CMD_PIPELINE_STATE_PROCESSING = 4,
+			CMD_PIPELINE_STATE_PROCESS_OVER = 5,
 		};
 
 		int _sn;
@@ -44,7 +45,7 @@ public:
 		int _processed_num;
 		reply_cb_t _reply_cb;
 		dispose_cb_t _dispose_cb;
-		REDIS_CMD_STATE _state;
+		CMD_PIPELINE_STATE _state;
 	};
 
 	virtual void				RunOnce() = 0;
