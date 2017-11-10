@@ -48,9 +48,7 @@ KjRedisConnection::OnClientConnect(KjTcpClient&, uint64_t connid) {
 			this,
 			std::placeholders::_1,
 			std::placeholders::_2)
-	).catch_([this](kj::Exception&& exception) {
-		OnClientError(_kjclient, kj::mv(exception));
-	});
+	);
 	_tasks->add(kj::mv(p1), "kjclient start read op");
 }
 
@@ -142,26 +140,6 @@ KjRedisConnection::OnClientReceive(KjTcpClient&, bip_buf_t& bbuf) {
 
 */
 void
-KjRedisConnection::OnClientError(KjTcpClient&, kj::Exception&& exception) {
-	//
-	taskFailed(kj::mv(exception));
-
-	// recommit
-	for (auto& cmd : _rscps) {
-		// recover sending state
-		if (IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_COMMITING == cmd._state) {
-			cmd._state = IRedisService::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING;
-			--_committing_num;
-		}
-	}
-	Commit();
-}
-
-//------------------------------------------------------------------------------
-/**
-
-*/
-void
 KjRedisConnection::Open(redis_stub_param_t& param) {
 	Connect(param._ip, param._port, [](KjRedisConnection& ) {
 		fprintf(stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!disconnected");
@@ -212,8 +190,11 @@ KjRedisConnection::Disconnect() {
 /**
 //! commit loop
 */
-kj::Promise<void>
+void
 KjRedisConnection::AutoReconnect() {
+	//
+	_tasks->add(_kjclient.DelayReconnect(), "kjclient delay reconnect");
+
 	// recommit
 	for (auto& cmd : _rscps) {
 		// recover sending state
@@ -223,9 +204,6 @@ KjRedisConnection::AutoReconnect() {
 		}
 	}
 	Commit();
-
-	// process connection error
-	return _kjclient.AutoReconnect();
 }
 
 //------------------------------------------------------------------------------

@@ -35,8 +35,6 @@ public:
 	virtual void OnClientDisconnect(KjTcpClient&, uint64_t);
 	virtual void OnClientReceive(KjTcpClient&, bip_buf_t& bbuf);
 
-	virtual void OnClientError(KjTcpClient&, kj::Exception&& exception);
-
 public:
 	void Open(redis_stub_param_t& param);
 	void Close();
@@ -74,12 +72,13 @@ public:
 private:
 	//! 
 	void taskFailed(kj::Exception&& exception) override {
-		fprintf(stderr, "[KjRedisConnection::taskFailed()] desc(%s) -- goto delay reconnect.\n", exception.getDescription().cStr());
-		_tasks->add(_kjclient.DelayReconnect(), "kjclient delay reconnect");
+		fprintf(stderr, "[KjRedisConnection::taskFailed()] desc(%s) -- auto reconnect.\n",
+			exception.getDescription().cStr());
+		AutoReconnect();
 	}
 
 	//! 
-	kj::Promise<void> AutoReconnect();
+	void AutoReconnect();
 
 	//! 
 	kj::Promise<void> CommitLoop();

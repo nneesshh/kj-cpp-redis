@@ -22,9 +22,6 @@
     <Filter Include="src\capnp\kj">
       <UniqueIdentifier>{78a7549a-bdc4-4fb6-8877-c87edd26df9b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\kj">
-      <UniqueIdentifier>{66239ed9-ecfe-4ec5-b030-eaf902510e75}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\RedisService.h">
