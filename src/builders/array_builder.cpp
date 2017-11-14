@@ -45,9 +45,6 @@ array_builder::array_builder() {
 			if (_reply.as_array().size() == _array_size)
 				_reply_ready = true;
 
-			// debug
-			// 	fprintf(stderr, "rows=%d/%lld\n, break",
-			// 		_reply.as_array().size(), _array_size);
 			_row_state = ROW_STATE_HEAD;
 			return true;
 		}
@@ -67,9 +64,6 @@ array_builder::array_builder() {
 			if (_reply.as_array().size() == _array_size)
 				_reply_ready = true;
 
-			// debug
-			// 	fprintf(stderr, "rows=%d/%lld\n, break",
-			// 		_reply.as_array().size(), _array_size);
 			_row_state = ROW_STATE_HEAD;
 			return true;
 		}
