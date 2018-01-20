@@ -1,11 +1,19 @@
 //------------------------------------------------------------------------------
-//  KjRedisWorkQueue.cpp
+//  KjRedisClientWorkQueue.cpp
 //  (C) 2016 n.lee
 //------------------------------------------------------------------------------
-#include "KjRedisWorkQueue.h"
+#include "KjRedisClientWorkQueue.hpp"
+
+#include "io/KjRedisClientConn.hpp"
+
+struct redis_thread_worker_t {
+	kj::Own<KjSimpleThreadIoContext>	_tioContext;
+	kj::Own<kj::TaskSet>				_tasks;
+	kj::Own<KjRedisClientConn>			_conn;
+};
 
 static kj::Promise<void>
-check_quit_loop(CKjRedisWorkQueue& q, redis_thread_worker_t& worker, kj::PromiseFulfiller<void> *fulfiller) {
+check_quit_loop(CKjRedisClientWorkQueue& q, redis_thread_worker_t& worker, kj::PromiseFulfiller<void> *fulfiller) {
 	if (!q.IsDone()) {
 		// wait 500 ms
 		return worker._tioContext->GetTimer().afterDelay(500 * kj::MICROSECONDS, "delay and check quit loop")
@@ -21,18 +29,16 @@ check_quit_loop(CKjRedisWorkQueue& q, redis_thread_worker_t& worker, kj::Promise
 }
 
 static kj::Promise<void>
-read_pipe_loop(CKjRedisWorkQueue& q, redis_thread_worker_t& worker, kj::AsyncIoStream& stream) {
+read_pipe_loop(CKjRedisClientWorkQueue& q, redis_thread_worker_t& worker, kj::AsyncIoStream& stream) {
 
 	if (!q.IsDone()) {
-		return stream.tryRead(&q._opCodeRecv, 1, 1)
+		return stream.tryRead(&q._opCodeRecvBuf, 1, 1024)
 			.then([&q, &worker, &stream](size_t amount) {
 			//
 			// Get next work item.
 			//
-			int nCmdSn = 0;
 			int nCount = 0;
 			while (q.Callbacks().try_dequeue(q._opCmd)) {
-				nCmdSn = q._opCmd._sn;
 				worker._conn->Send(q._opCmd);
 				++nCount;
 			}
@@ -50,12 +56,10 @@ read_pipe_loop(CKjRedisWorkQueue& q, redis_thread_worker_t& worker, kj::AsyncIoS
 /**
 
 */
-CKjRedisWorkQueue::CKjRedisWorkQueue(redis_stub_param_t& param)
-	: _refParam(param)
+CKjRedisClientWorkQueue::CKjRedisClientWorkQueue(kj::Own<KjSimpleIoContext> rootContext, redis_stub_param_t& param)
+	: _rootContext(kj::addRef(*rootContext))
+	, _refParam(param)
 	, _callbacks(256) {
-	//
-	_pipeContext = kj::refcounted<KjSimpleIoContext>();
-
 	//
 	Start();
 }
@@ -64,9 +68,7 @@ CKjRedisWorkQueue::CKjRedisWorkQueue(redis_stub_param_t& param)
 /**
 
 */
-CKjRedisWorkQueue::~CKjRedisWorkQueue() {
-	_pipeContext = nullptr;
-
+CKjRedisClientWorkQueue::~CKjRedisClientWorkQueue() {
 	_pipeThread.pipe = nullptr;
 	_pipeThread.thread = nullptr;
 }
@@ -76,11 +78,11 @@ CKjRedisWorkQueue::~CKjRedisWorkQueue() {
 
 */
 bool
-CKjRedisWorkQueue::Add(IRedisService::cmd_pipepline_t&& cmd) {
+CKjRedisClientWorkQueue::Add(cmd_pipepline_t&& cmd) {
 
 	if (_done) {
 		// error
-		fprintf(stderr, "[CKjRedisWorkQueue::Add()] can't enqueue, callback is dropped!!!");
+		fprintf(stderr, "[CKjRedisClientWorkQueue::Add()] can't enqueue, callback is dropped!!!");
 		return false;
 	}
 
@@ -89,7 +91,7 @@ CKjRedisWorkQueue::Add(IRedisService::cmd_pipepline_t&& cmd) {
 	//
 	if (!_callbacks.enqueue(std::move(cmd))) {
 		// error
-		fprintf(stderr, "[CKjRedisWorkQueue::Add()] enqueue failed, callback is dropped!!!");
+		fprintf(stderr, "[CKjRedisClientWorkQueue::Add()] enqueue failed, callback is dropped!!!");
 		return false;
 	}
 
@@ -104,7 +106,7 @@ CKjRedisWorkQueue::Add(IRedisService::cmd_pipepline_t&& cmd) {
 
 */
 void
-CKjRedisWorkQueue::Finish() {
+CKjRedisClientWorkQueue::Finish() {
 	//
 	// Set done flag and notify.
 	//
@@ -121,12 +123,12 @@ CKjRedisWorkQueue::Finish() {
 
 */
 void
-CKjRedisWorkQueue::Start() {
+CKjRedisClientWorkQueue::Start() {
 	//
-	_pipeThread = _pipeContext->NewPipeThread(
+	_pipeThread = _rootContext->NewPipeThread(
 		[this](kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream& stream, kj::WaitScope& waitScope) {
 		//
-		Run(ioProvider, stream, waitScope);
+		Run(ioProvider, stream, waitScope, _refParam._mapScript);
 	});
 }
 
@@ -135,12 +137,12 @@ CKjRedisWorkQueue::Start() {
 
 */
 void
-CKjRedisWorkQueue::Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream& stream, kj::WaitScope& waitScope) {
+CKjRedisClientWorkQueue::Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream& stream, kj::WaitScope& waitScope, const std::map<std::string, std::string>& mapScript) {
 	//
 	redis_thread_worker_t worker;
 	worker._tioContext = kj::refcounted<KjSimpleThreadIoContext>(ioProvider, stream, waitScope);
-	worker._tasks = worker._tioContext->CreateTaskSet();
-	worker._conn = kj::heap<KjRedisConnection>(kj::addRef(*worker._tioContext));
+	worker._tasks = worker._tioContext->CreateTaskSet(*this);
+	worker._conn = kj::heap<KjRedisClientConn>(kj::addRef(*worker._tioContext), _refParam);
 
 	auto paf = kj::newPromiseAndFulfiller<void>();
 	worker._conn->Open(_refParam);
@@ -166,6 +168,17 @@ CKjRedisWorkQueue::Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream& strea
 
 	// thread dispose
 	worker._conn->Close();
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+void
+CKjRedisClientWorkQueue::taskFailed(kj::Exception&& exception) {
+	fprintf(stderr, "[CKjRedisClientWorkQueue::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
+	system("pause");
+	kj::throwFatalException(kj::mv(exception));
 }
 
 /** -- EOF -- **/

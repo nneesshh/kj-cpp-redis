@@ -101,11 +101,6 @@ bulk_string_builder::get_reply() {
 	return std::move(_reply);
 }
 
-const std::string&
-bulk_string_builder::get_bulk_string() const {
-	return _str;
-}
-
 bool
 bulk_string_builder::is_null() const {
 	return _is_null;

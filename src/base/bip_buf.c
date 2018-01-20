@@ -83,11 +83,11 @@ fast_strstr(const char *haystack, size_t haystacklen, const char *needle, size_t
 /* struct bip_buf_s                                                     */
 /************************************************************************/
 struct bip_buf_s {
-	/* user usable capacity ( = half size of the full mirror buffer) */
-	size_t _available_capacity;
-
 	/* the mirror buffer, it's real size is the double size of available capacity */
 	char *_buffer;
+
+	/* user usable capacity ( = half size of the full mirror buffer) */
+	size_t _available_capacity;
 
 	/* stats for commit */
 	int _committed_sum;

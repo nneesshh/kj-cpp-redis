@@ -12,7 +12,7 @@
 #include <string>
 #include <functional>
 
-#include "KjSimpleThreadIoContext.h"
+#include "KjSimpleThreadIoContext.hpp"
 
 #include "builders/builder_iface.hpp"
 
@@ -63,6 +63,12 @@ public:
 	//! returns whether a reply is available
 	bool IsReplyAvailable() const {
 		return _available_replies.size() > 0;
+	}
+
+	void Reset() {
+		_state = STATE_HEAD;
+		_builder_i = nullptr;
+		_available_replies.clear();
 	}
 
 private:

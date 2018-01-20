@@ -45,11 +45,10 @@ public:
 	bool reply_ready() const;
 	CRedisReply&&  get_reply();
 
-	//! getter
-	std::string& get_error();
-
 private:
 	simple_string_builder _msg_builder;
+
+	bool _reply_ready = false;;
 	CRedisReply _reply;
 };
 

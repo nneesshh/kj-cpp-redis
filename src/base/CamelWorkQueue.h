@@ -14,10 +14,10 @@
 /**
 @brief CCamelWorkQueue
 */
-class CCamelWorkQueue {
+class CCamelConcurrentWorkQueue {
 public:
-	CCamelWorkQueue();
-	~CCamelWorkQueue();
+	CCamelConcurrentWorkQueue();
+	~CCamelConcurrentWorkQueue();
 
 	using CallbackEntry = std::function<void()>;
 
@@ -31,6 +31,6 @@ private:
 
 	moodycamel::ReaderWriterQueue<CallbackEntry> _callbacks;
 };
-using CCamelWorkQueuePtr = std::shared_ptr<CCamelWorkQueue>;
+using CCamelWorkQueuePtr = std::shared_ptr<CCamelConcurrentWorkQueue>;
 
 /*EOF*/

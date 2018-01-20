@@ -28,28 +28,30 @@ namespace builders {
 
 builder_iface&
 error_builder::operator<<(bip_buf_t& bbuf) {
-  _msg_builder << bbuf;
+	if (_reply_ready)
+		return *this;
 
-  if (_msg_builder.reply_ready())
-    _reply.set(_msg_builder.get_simple_string(), CRedisReply::string_type::error);
+	_msg_builder << bbuf;
 
-  return *this;
+	if (_msg_builder.reply_ready()) {
+		_reply.set(_msg_builder.get_reply().as_string(), CRedisReply::string_type::error);
+		_reply_ready = true;
+	}
+
+	return *this;
 }
 
 bool
 error_builder::reply_ready() const {
-  return _msg_builder.reply_ready();
+	return _reply_ready;
 }
 
 CRedisReply&&
 error_builder::get_reply() {
 	CRedisReply r1 = _msg_builder.get_reply(); // clear through &&
-	return std::move(_reply);
-}
 
-std::string&
-error_builder::get_error() {
-  return _msg_builder.get_simple_string();
+	_reply_ready = false;
+	return std::move(_reply);
 }
 
 } //! builders

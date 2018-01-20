@@ -58,11 +58,6 @@ simple_string_builder::get_reply() {
 	return std::move(_reply);
 }
 
-std::string&
-simple_string_builder::get_simple_string() {
-	return _str;
-}
-
 } //! builders
 
 } //! cpp_redis

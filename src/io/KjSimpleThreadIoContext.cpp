@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-//  KjRedistioContext.cpp
+//  KjSimpleThreadIoContext.cpp
 //  (C) 2016 n.lee
 //------------------------------------------------------------------------------
-#include "KjSimpleThreadIoContext.h"
+#include "KjSimpleThreadIoContext.hpp"
 
 #pragma push_macro("ERROR")
 #undef ERROR

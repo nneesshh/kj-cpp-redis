@@ -8,7 +8,7 @@
 /**
 
 */
-CCamelWorkQueue::CCamelWorkQueue()
+CCamelConcurrentWorkQueue::CCamelConcurrentWorkQueue()
 	: _callbacks(256) {
 
 }
@@ -17,7 +17,7 @@ CCamelWorkQueue::CCamelWorkQueue()
 /**
 
 */
-CCamelWorkQueue::~CCamelWorkQueue() {
+CCamelConcurrentWorkQueue::~CCamelConcurrentWorkQueue() {
 
 }
 
@@ -26,7 +26,7 @@ CCamelWorkQueue::~CCamelWorkQueue() {
 
 */
 void
-CCamelWorkQueue::RunOnce() {
+CCamelConcurrentWorkQueue::RunOnce() {
 	// work queue
 	int nCount = 0;
 	CallbackEntry workCb;
@@ -43,7 +43,7 @@ CCamelWorkQueue::RunOnce() {
 
 */
 void
-CCamelWorkQueue::Close() {
+CCamelConcurrentWorkQueue::Close() {
 	//
 	// Set done flag and notify.
 	//
@@ -55,7 +55,7 @@ CCamelWorkQueue::Close() {
 
 */
 bool
-CCamelWorkQueue::Add(std::function<void()>&& workCb) {
+CCamelConcurrentWorkQueue::Add(std::function<void()>&& workCb) {
 	if (_close) {
 		// error
 		fprintf(stderr, "[CCamelWorkQueue::Add()] can't enqueue, callback is dropped!!!");

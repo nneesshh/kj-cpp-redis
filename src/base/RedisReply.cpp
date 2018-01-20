@@ -49,8 +49,8 @@ CRedisReply::ko() const {
 	return !ok();
 }
 
-const std::string&
-CRedisReply::error() const {
+std::string&
+CRedisReply::error_desc() {
 	if (!is_error())
 		throw CRedisError("Reply is not an error");
 
@@ -67,7 +67,7 @@ CRedisReply::set() {
 }
 
 void
-CRedisReply::set(std::string& value, string_type reply_type) {
+CRedisReply::set(const std::string& value, string_type reply_type) {
 	_type = static_cast<type>(reply_type);
 	_strval = std::move(value);
 }
@@ -127,16 +127,16 @@ CRedisReply::is_null() const {
 	return _type == type::null;
 }
 
-const std::vector<CRedisReply>&
-CRedisReply::as_array() const {
+std::vector<CRedisReply>&
+CRedisReply::as_array() {
 	if (!is_array())
 		throw CRedisError("Reply is not an array");
 
 	return _rows;
 }
 
-const std::string&
-CRedisReply::as_string() const {
+std::string&
+CRedisReply::as_string() {
 	if (!is_string())
 		throw CRedisError("Reply is not a string");
 
@@ -157,10 +157,10 @@ CRedisReply::get_type() const {
 }
 
 std::ostream&
-operator<<(std::ostream& os, const CRedisReply& reply) {
+operator<<(std::ostream& os, CRedisReply&& reply) {
 	switch (reply.get_type()) {
 	case CRedisReply::type::error:
-		os << reply.error();
+		os << reply.error_desc();
 		break;
 	case CRedisReply::type::bulk_string:
 		os << reply.as_string();

@@ -46,13 +46,10 @@ public:
 	bool reply_ready() const;
 	CRedisReply&& get_reply();
 
-	//! getter
-	std::string& get_simple_string();
-
 private:
 	std::string _str;
-	bool _reply_ready = false;
 
+	bool _reply_ready = false;
 	CRedisReply _reply;
 };
 

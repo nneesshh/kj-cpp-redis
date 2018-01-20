@@ -46,7 +46,6 @@ public:
 	CRedisReply&& get_reply();
 
 	//! getter
-	const std::string& get_bulk_string() const;
 	bool is_null() const;
 
 private:

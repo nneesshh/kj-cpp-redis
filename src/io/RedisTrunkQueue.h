@@ -25,7 +25,11 @@ public:
 		_workQueue->Close();
 	}
 
-	void Add(IRedisService::reply_cb_t&&, CRedisReply&&);
+	void Add(std::function<void()>&& workCb) {
+		_workQueue->Add(std::move(workCb));
+	}
+
+	void Add(redis_reply_cb_t&&, CRedisReply&&);
 
 private:
 	CCamelWorkQueuePtr _workQueue;

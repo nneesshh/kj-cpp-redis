@@ -2,7 +2,7 @@
 //  KjSimpleIoContext.cpp
 //  (C) 2016 n.lee
 //------------------------------------------------------------------------------
-#include "KjSimpleIoContext.h"
+#include "KjSimpleIoContext.hpp"
 
 #pragma push_macro("ERROR")
 #undef ERROR

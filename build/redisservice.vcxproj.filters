@@ -22,9 +22,6 @@
     <Filter Include="src\capnp\kj">
       <UniqueIdentifier>{78a7549a-bdc4-4fb6-8877-c87edd26df9b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\kj">
-      <UniqueIdentifier>{66239ed9-ecfe-4ec5-b030-eaf902510e75}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\RedisService.h">
@@ -54,37 +51,10 @@
     <ClInclude Include="..\src\builders\sub_array_builder.hpp">
       <Filter>src\builders</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io\KjSimpleIoContext.h">
-      <Filter>src\io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io\KjSimpleThreadIoContext.h">
-      <Filter>src\io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io\KjTcpClient.hpp">
-      <Filter>src\io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io\RedisTrunkQueue.h">
-      <Filter>src\io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io\KjRedisConnection.hpp">
-      <Filter>src\io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io\KjRedisSubscriber.hpp">
-      <Filter>src\io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io\KjRedisWorkQueue.h">
-      <Filter>src\io</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io\KjReplyBuilder.hpp">
       <Filter>src\io</Filter>
     </ClInclude>
     <ClInclude Include="..\src\base\IRedisService.h">
-      <Filter>src\base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\base\RedisError.h">
-      <Filter>src\base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\base\RedisReply.h">
       <Filter>src\base</Filter>
     </ClInclude>
     <ClInclude Include="..\src\base\bip_buf.h">
@@ -99,8 +69,59 @@
     <ClInclude Include="..\src\base\concurrent\atomicops.h">
       <Filter>src\base\concurrent</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\UsingKjCppRedis.hpp">
+    <ClInclude Include="..\src\RedisClient.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\RedisSubscriber.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io\KjRedisSubscriberConn.hpp">
+      <Filter>src\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io\KjRedisClientConn.hpp">
+      <Filter>src\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io\KjSimpleIoContext.hpp">
+      <Filter>src\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io\KjSimpleThreadIoContext.hpp">
+      <Filter>src\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io\KjRedisClientWorkQueue.hpp">
+      <Filter>src\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io\KjRedisSubscriberWorkQueue.hpp">
+      <Filter>src\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io\RedisTrunkQueue.h">
+      <Filter>src\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io\KjTcpConnection.hpp">
+      <Filter>src\io</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\RedisRankingProxy.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\RedisCacheProxy.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\RedisListProxy.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\RedisError.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\redis_service_def.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\RedisReply.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\UsingRedisService.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\platform_types.h">
+      <Filter>src\base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -134,16 +155,7 @@
     <ClCompile Include="..\src\io\KjSimpleThreadIoContext.cpp">
       <Filter>src\io</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io\KjTcpClient.cpp">
-      <Filter>src\io</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io\RedisTrunkQueue.cpp">
-      <Filter>src\io</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io\KjRedisConnection.cpp">
-      <Filter>src\io</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io\KjRedisWorkQueue.cpp">
       <Filter>src\io</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io\KjReplyBuilder.cpp">
@@ -209,9 +221,6 @@
     <ClCompile Include="..\src\capnp\kj\refcount.cc">
       <Filter>src\capnp\kj</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\base\RedisReply.cpp">
-      <Filter>src\base</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\base\bip_buf.c">
       <Filter>src\base</Filter>
     </ClCompile>
@@ -221,7 +230,40 @@
     <ClCompile Include="..\src\RedisServicePlugin.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\UsingKjCppRedis.cpp">
+    <ClCompile Include="..\src\io\KjRedisSubscriberWorkQueue.cpp">
+      <Filter>src\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RedisClient.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RedisSubscriber.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io\KjRedisClientWorkQueue.cpp">
+      <Filter>src\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io\KjRedisSubscriberConn.cpp">
+      <Filter>src\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io\KjRedisClientConn.cpp">
+      <Filter>src\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io\KjTcpConnection.cpp">
+      <Filter>src\io</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\RedisCacheProxy.cpp">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\RedisListProxy.cpp">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\RedisRankingProxy.cpp">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\RedisReply.cpp">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\UsingRedisService.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

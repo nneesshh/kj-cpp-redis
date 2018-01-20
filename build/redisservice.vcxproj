@@ -16,8 +16,13 @@
     <ClInclude Include="..\src\base\concurrent\atomicops.h" />
     <ClInclude Include="..\src\base\concurrent\readerwriterqueue.h" />
     <ClInclude Include="..\src\base\IRedisService.h" />
+    <ClInclude Include="..\src\base\RedisCacheProxy.h" />
     <ClInclude Include="..\src\base\RedisError.h" />
+    <ClInclude Include="..\src\base\RedisListProxy.h" />
+    <ClInclude Include="..\src\base\RedisRankingProxy.h" />
     <ClInclude Include="..\src\base\RedisReply.h" />
+    <ClInclude Include="..\src\base\redis_service_def.h" />
+    <ClInclude Include="..\src\base\platform_types.h" />
     <ClInclude Include="..\src\builders\array_builder.hpp" />
     <ClInclude Include="..\src\builders\builders_factory.hpp" />
     <ClInclude Include="..\src\builders\builder_iface.hpp" />
@@ -26,20 +31,26 @@
     <ClInclude Include="..\src\builders\integer_builder.hpp" />
     <ClInclude Include="..\src\builders\simple_string_builder.hpp" />
     <ClInclude Include="..\src\builders\sub_array_builder.hpp" />
-    <ClInclude Include="..\src\io\KjRedisConnection.hpp" />
-    <ClInclude Include="..\src\io\KjRedisSubscriber.hpp" />
-    <ClInclude Include="..\src\io\KjRedisWorkQueue.h" />
+    <ClInclude Include="..\src\io\KjRedisClientConn.hpp" />
+    <ClInclude Include="..\src\io\KjRedisClientWorkQueue.hpp" />
+    <ClInclude Include="..\src\io\KjRedisSubscriberConn.hpp" />
+    <ClInclude Include="..\src\io\KjRedisSubscriberWorkQueue.hpp" />
     <ClInclude Include="..\src\io\KjReplyBuilder.hpp" />
-    <ClInclude Include="..\src\io\KjSimpleIoContext.h" />
-    <ClInclude Include="..\src\io\KjSimpleThreadIoContext.h" />
-    <ClInclude Include="..\src\io\KjTcpClient.hpp" />
+    <ClInclude Include="..\src\io\KjSimpleIoContext.hpp" />
+    <ClInclude Include="..\src\io\KjSimpleThreadIoContext.hpp" />
+    <ClInclude Include="..\src\io\KjTcpConnection.hpp" />
     <ClInclude Include="..\src\io\RedisTrunkQueue.h" />
+    <ClInclude Include="..\src\RedisClient.h" />
     <ClInclude Include="..\src\RedisService.h" />
-    <ClInclude Include="..\src\UsingKjCppRedis.hpp" />
+    <ClInclude Include="..\src\RedisSubscriber.h" />
+    <ClInclude Include="..\src\UsingRedisService.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\base\bip_buf.c" />
     <ClCompile Include="..\src\base\CamelWorkQueue.cpp" />
+    <ClCompile Include="..\src\base\RedisCacheProxy.cpp" />
+    <ClCompile Include="..\src\base\RedisListProxy.cpp" />
+    <ClCompile Include="..\src\base\RedisRankingProxy.cpp" />
     <ClCompile Include="..\src\base\RedisReply.cpp" />
     <ClCompile Include="..\src\capnp\kj\arena.cc" />
     <ClCompile Include="..\src\capnp\kj\array.cc" />
@@ -68,19 +79,23 @@
     <ClCompile Include="..\src\builders\integer_builder.cpp" />
     <ClCompile Include="..\src\builders\simple_string_builder.cpp" />
     <ClCompile Include="..\src\builders\sub_array_builder.cpp" />
-    <ClCompile Include="..\src\io\KjRedisConnection.cpp" />
-    <ClCompile Include="..\src\io\KjRedisWorkQueue.cpp" />
+    <ClCompile Include="..\src\io\KjRedisClientConn.cpp" />
+    <ClCompile Include="..\src\io\KjRedisClientWorkQueue.cpp" />
+    <ClCompile Include="..\src\io\KjRedisSubscriberConn.cpp" />
+    <ClCompile Include="..\src\io\KjRedisSubscriberWorkQueue.cpp" />
     <ClCompile Include="..\src\io\KjReplyBuilder.cpp" />
     <ClCompile Include="..\src\io\KjSimpleIoContext.cpp" />
     <ClCompile Include="..\src\io\KjSimpleThreadIoContext.cpp" />
-    <ClCompile Include="..\src\io\KjTcpClient.cpp" />
+    <ClCompile Include="..\src\io\KjTcpConnection.cpp" />
     <ClCompile Include="..\src\io\RedisTrunkQueue.cpp" />
+    <ClCompile Include="..\src\RedisClient.cpp" />
     <ClCompile Include="..\src\RedisService.cpp" />
     <ClCompile Include="..\src\RedisServicePlugin.cpp" />
-    <ClCompile Include="..\src\UsingKjCppRedis.cpp" />
+    <ClCompile Include="..\src\RedisSubscriber.cpp" />
+    <ClCompile Include="..\src\UsingRedisService.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{95830A70-A9E4-4556-9073-93D6D22E7CFD}</ProjectGuid>
+    <ProjectGuid>{F82DA110-3B28-469F-8BDF-231EF3007558}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>SgServer</RootNamespace>
     <ProjectName>redisservice</ProjectName>
@@ -129,7 +144,7 @@
     </Link>
     <ClCompile>
       <AdditionalIncludeDirectories>../src;../src/capnp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;HAVE_STRUCT_TIMESPEC;_ENABLE_ATOMIC_ALIGNMENT_FIX;MY_BUILDING_SHARED;NO_REDISSERVICE_DEBUG_CMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;HAVE_STRUCT_TIMESPEC;_ENABLE_ATOMIC_ALIGNMENT_FIX;MY_REDIS_BUILDING_SHARED;NO_REDISSERVICE_DEBUG_CMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
@@ -142,7 +157,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>../src;../src/capnp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;HAVE_STRUCT_TIMESPEC;_ENABLE_ATOMIC_ALIGNMENT_FIX;MY_BUILDING_SHARED;NO_REDISSERVICE_DEBUG_CMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;HAVE_STRUCT_TIMESPEC;_ENABLE_ATOMIC_ALIGNMENT_FIX;MY_REDIS_BUILDING_SHARED;NO_REDISSERVICE_DEBUG_CMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
     </ClCompile>

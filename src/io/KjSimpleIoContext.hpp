@@ -7,14 +7,16 @@
 */
 #include <algorithm>
 
+#pragma push_macro("ERROR")
+#undef ERROR
+#pragma push_macro("VOID")
+
+#undef VOID
 #include <kj/async.h>
 #include <kj/async-io.h>
 
-#ifdef _WIN32
-#include "kj/async-win32.h"
-#else
-#include "kj/async-unix.h"
-#endif
+#pragma pop_macro("ERROR")
+#pragma pop_macro("VOID")
 
 class KjSimpleIoContext : public kj::Refcounted, public kj::TaskSet::ErrorHandler {
 public:

@@ -1,20 +1,22 @@
 #pragma once
 //------------------------------------------------------------------------------
 /**
-@class CKjRedistioContext
+@class KjSimpleThreadIoContext
 
 (C) 2016 n.lee
 */
 #include <algorithm>
 
+#pragma push_macro("ERROR")
+#undef ERROR
+#pragma push_macro("VOID")
+
+#undef VOID
 #include <kj/async.h>
 #include <kj/async-io.h>
 
-#ifdef _WIN32
-#include "kj/async-win32.h"
-#else
-#include "kj/async-unix.h"
-#endif
+#pragma pop_macro("ERROR")
+#pragma pop_macro("VOID")
 
 class KjSimpleThreadIoContext : public kj::Refcounted, public kj::TaskSet::ErrorHandler {
 public:
@@ -66,7 +68,7 @@ public:
 
 private:
 	void taskFailed(kj::Exception&& exception) override {
-		fprintf(stderr, "[KjRedistioContext::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
+		fprintf(stderr, "[KjSimpleThreadIoContext::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
 		system("pause");
 		kj::throwFatalException(kj::mv(exception));
 	}

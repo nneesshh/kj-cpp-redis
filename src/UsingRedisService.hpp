@@ -14,6 +14,12 @@
 #pragma comment(lib, "WS2_32.Lib")
 #endif
 
+#include "base/redis_service_def.h"
+#include "base/RedisReply.h"
+#include "base/RedisCacheProxy.h"
+#include "base/RedisListProxy.h"
+#include "base/RedisRankingProxy.h"
+
 #include "RedisService.h"
 
 /*EOF*/

@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-//  KjTcpClient.cpp
+//  KjTcpConnection.cpp
 //  (C) 2016 n.lee
 //------------------------------------------------------------------------------
-#include "KjTcpClient.hpp"
+#include "KjTcpConnection.hpp"
 
 #include <assert.h>
 
@@ -16,24 +16,26 @@
 #pragma pop_macro("ERROR")
 #pragma pop_macro("VOID")
 
-#define KJ_TCP_CLIENT_READ_RESERVE_SIZE	1024 * 64
+#define KJ_TCP_CONNECTION_READ_SIZE				4096
+#define KJ_TCP_CONNECTION_READ_RESERVE_SIZE		1024 * 64
 
 //------------------------------------------------------------------------------
 /**
 //! ctor & dtor
 */
-KjTcpClient::KjTcpClient(kj::Own<KjSimpleThreadIoContext> tioContext, size_t readSize)
-	: _tioContext(kj::mv(tioContext)) {
+KjTcpConnection::KjTcpConnection(kj::Own<KjSimpleThreadIoContext> tioContext, uint64_t connid)
+	: _tioContext(kj::mv(tioContext))
+	, _connid(connid) {
 	
-	_connAttach._readSize = readSize;
-	_bbuf = bip_buf_create(KJ_TCP_CLIENT_READ_RESERVE_SIZE);
-
-	auto paf = kj::newPromiseAndFulfiller<void>();
-	_disconnectPromise = paf.promise.fork();
-	_disconnectFulfiller = kj::mv(paf.fulfiller);
+	_connAttach._readSize = KJ_TCP_CONNECTION_READ_SIZE;
+	_bbuf = bip_buf_create(KJ_TCP_CONNECTION_READ_RESERVE_SIZE);
 }
 
-KjTcpClient::~KjTcpClient() {
+//------------------------------------------------------------------------------
+/**
+
+*/
+KjTcpConnection::~KjTcpConnection() {
 	Disconnect();
 
 	bip_buf_destroy(_bbuf);
@@ -44,12 +46,16 @@ KjTcpClient::~KjTcpClient() {
 //! comparison operator
 */
 bool
-KjTcpClient::operator==(const KjTcpClient& rhs) const {
+KjTcpConnection::operator==(const KjTcpConnection& rhs) const {
 	return _connid == rhs._connid;
 }
 
+//------------------------------------------------------------------------------
+/**
+
+*/
 bool
-KjTcpClient::operator!=(const KjTcpClient& rhs) const {
+KjTcpConnection::operator!=(const KjTcpConnection& rhs) const {
 	return !operator==(rhs);
 }
 
@@ -58,24 +64,29 @@ KjTcpClient::operator!=(const KjTcpClient& rhs) const {
 
 */
 kj::Promise<void>
-KjTcpClient::Connect(
+KjTcpConnection::Connect(
 	kj::StringPtr host,
 	kj::uint port,
 	CONNECT_CB connectCb,
 	DISCONNECT_CB disconnectCb) {
 
+	auto paf = kj::newPromiseAndFulfiller<void>();
+	_disconnectPromise = paf.promise.fork();
+	_disconnectFulfiller = kj::mv(paf.fulfiller);
+
 	_connAttach._connectCb = connectCb;
 	_connAttach._disconnectCb = disconnectCb;
 
-	fprintf(stderr, "[KjTcpClient::Connect()] parse address, host(%s)port(%d)...\n",
-		host.cStr(), port);
-	auto p1 = _tioContext->GetNetwork().parseAddress(host, port)
+	_host = host;
+	_port = port;
+
+	auto p1 = _tioContext->GetNetwork().parseAddress(_host, _port)
 		.then([this](kj::Own<kj::NetworkAddress>&& addr) {
+
 		_addr = kj::mv(addr);
 
-		fprintf(stderr, "[KjTcpClient::Connect() -- parseAddress()] start connect...\n");
 		return StartConnect();
-	}).exclusiveJoin(_disconnectPromise.addBranch());
+	}).exclusiveJoin(DisconnectWatcher());
 	return kj::mv(p1);
 }
 
@@ -84,9 +95,9 @@ KjTcpClient::Connect(
 
 */
 kj::Promise<void>
-KjTcpClient::Write(const void* buffer, size_t size) {
+KjTcpConnection::Write(const void* buffer, size_t size) {
 	auto p1 = _stream->write(buffer, size)
-		.exclusiveJoin(_disconnectPromise.addBranch());
+		.exclusiveJoin(DisconnectWatcher());
 	return kj::mv(p1);
 }
 
@@ -95,8 +106,11 @@ KjTcpClient::Write(const void* buffer, size_t size) {
 
 */
 void
-KjTcpClient::Disconnect() {
-	if (IsConnected()) {
+KjTcpConnection::Disconnect() {
+	if (_bIsConnected) {
+		//
+		_bIsConnected = false;
+
 		//
 		OnDisconnect();
 
@@ -112,10 +126,10 @@ KjTcpClient::Disconnect() {
 
 */
 kj::Promise<void>
-KjTcpClient::StartReadOp(READ_CB readCb) {
+KjTcpConnection::StartReadOp(const READ_CB& readCb) {
 	_connAttach._readCb = readCb;
 	return AsyncReadLoop()
-		.exclusiveJoin(_disconnectPromise.addBranch());
+		.exclusiveJoin(DisconnectWatcher());
 }
 
 //------------------------------------------------------------------------------
@@ -123,18 +137,37 @@ KjTcpClient::StartReadOp(READ_CB readCb) {
 
 */
 kj::Promise<void>
-KjTcpClient::StartConnect() {
+KjTcpConnection::DelayReconnect() {
+
+	if (_bIsConnected) {
+		//
+		_bIsConnected = false;
+
+		//
+		OnDisconnect();
+	}
+	return Reconnect();
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+kj::Promise<void>
+KjTcpConnection::StartConnect() {
+
 	return _addr->connect()
 		.then([this](kj::Own<kj::AsyncIoStream>&& stream) {
 
 		_stream = kj::mv(stream);
 		_bIsConnected = true;
-		
-		fprintf(stderr, "[KjTcpClient::StartConnect() -- then()] call connectCb...\n");
 
+		fprintf(stderr, "Connect ok.\n");
+		
 		if (_connAttach._connectCb) {
 			_connAttach._connectCb(*this, _connid);
 		}
+
 	});
 }
 
@@ -143,17 +176,24 @@ KjTcpClient::StartConnect() {
 
 */
 kj::Promise<void>
-KjTcpClient::Reconnect() {
+KjTcpConnection::Reconnect() {
 	const unsigned int uDelaySeconds = 3;
 
+	auto paf = kj::newPromiseAndFulfiller<void>();
+	_disconnectPromise = paf.promise.fork();
+	_disconnectFulfiller = kj::mv(paf.fulfiller);
+
 	if (!_bIsReconnecting) {
+
 		_bIsReconnecting = true;
-		fprintf(stderr, "[KjTcpClient::Reconnect()] reconnect after (%d) seconds...\n", uDelaySeconds);
+
+		fprintf(stderr, "[KjTcpConnection::Reconnect()] host(%s)port(%d), reconnect after (%d) seconds...\n",
+			_host.cStr(), _port, uDelaySeconds);
 
 		return _tioContext->AfterDelay(uDelaySeconds * kj::SECONDS, "reconnect")
 			.then([this]() {
+
 			_bIsReconnecting = false;
-			fprintf(stderr, "[KjTcpClient::Reconnect() -- AfterDelay()] start reconnect...\n");
 			return StartConnect();
 		});
 	}
@@ -165,22 +205,18 @@ KjTcpClient::Reconnect() {
 
 */
 kj::Promise<void>
-KjTcpClient::AsyncReadLoop() {
-	size_t szreserved = _connAttach._readSize;
-	char *bufbase = bip_buf_force_reserve(_bbuf, &szreserved);
-	int buflen = szreserved;
+KjTcpConnection::AsyncReadLoop() {
 
-	assert(nullptr != bufbase);
+	size_t buflen = _connAttach._readSize;
+	char *bufbase = bip_buf_force_reserve(_bbuf, &buflen);
+
+	assert(bufbase && buflen > 0);
 
 	return _stream->read(bufbase, 1, buflen)
 		.then([this](size_t amount) {
 		//
-		char *bufbase;
-		int buflen;
-
 		bip_buf_commit(_bbuf, (int)amount);
-		bufbase = bip_buf_get_contiguous_block(_bbuf);
-		buflen = bip_buf_get_committed_size(_bbuf);
+
 		if (_connAttach._readCb) {
 			_connAttach._readCb(*this, *_bbuf);
 		}

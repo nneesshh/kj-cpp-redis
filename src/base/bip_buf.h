@@ -5,12 +5,16 @@
 # ifndef INLINE
 # define INLINE __inline
 # endif
+# ifndef NOINLINE
 # define NOINLINE __declspec (noinline)
+# endif
 #else  /* gcc */
 # ifndef INLINE
 # define INLINE inline
 # endif
+# ifndef NOINLINE
 # define NOINLINE __attribute__ ((noinline))
+# endif
 #endif
 
 #ifdef __cplusplus 

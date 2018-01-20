@@ -483,7 +483,8 @@ public:
                             reinterpret_cast<char*>(&value), sizeof(value)));
     }
 
-    KJ_WINSOCK(::bind(sockfd, &addr.generic, addrlen), toString());
+	kj::String s = toString();
+	KJ_WINSOCK(::bind(sockfd, &addr.generic, addrlen), s.cStr());
   }
 
   uint getPort() const {

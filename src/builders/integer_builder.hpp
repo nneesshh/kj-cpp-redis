@@ -52,8 +52,8 @@ public:
 private:
 	int64_t _nbr = 0;
 	char _negative_multiplicator = 1;
-	bool _reply_ready = false;
 
+	bool _reply_ready = false;
 	CRedisReply _reply;
 };
 

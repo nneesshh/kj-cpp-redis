@@ -6,42 +6,47 @@
 
 (C) 2016 n.lee
 */
-#include <iostream>
 #include <string>
 #include <vector>
-
+#include <iostream>
+#include <functional>
 #include <stdint.h>
+
+#include "platform_types.h"
+
+class CRedisReply;
+using redis_reply_cb_t = std::function<void(CRedisReply&&)>;
 
 //------------------------------------------------------------------------------
 /**
 @brief CRedisReply
 */
-class CRedisReply {
+class MY_REDIS_EXTERN CRedisReply {
 public:
-	//! type of reply
-#define __CPP_REDIS_REPLY_ERR 0
-#define __CPP_REDIS_REPLY_BULK 1
-#define __CPP_REDIS_REPLY_SIMPLE 2
-#define __CPP_REDIS_REPLY_NULL 3
-#define __CPP_REDIS_REPLY_INT 4
-#define __CPP_REDIS_REPLY_ARRAY 5
+	enum REPLY_TYPE {
+		REDIS_REPLY_TYPE_ERR = 0,
+		REDIS_REPLY_TYPE_BULK = 1,
+		REDIS_REPLY_TYPE_SIMPLE = 2,
+		REDIS_REPLY_TYPE_NULL = 3,
+		REDIS_REPLY_TYPE_INT = 4,
+		REDIS_REPLY_TYPE_ARRAY = 5,
+	};
 
 	enum class type {
-		error = __CPP_REDIS_REPLY_ERR,
-		bulk_string = __CPP_REDIS_REPLY_BULK,
-		simple_string = __CPP_REDIS_REPLY_SIMPLE,
-		null = __CPP_REDIS_REPLY_NULL,
-		integer = __CPP_REDIS_REPLY_INT,
-		array = __CPP_REDIS_REPLY_ARRAY
+		error = REDIS_REPLY_TYPE_ERR,
+		bulk_string = REDIS_REPLY_TYPE_BULK,
+		simple_string = REDIS_REPLY_TYPE_SIMPLE,
+		null = REDIS_REPLY_TYPE_NULL,
+		integer = REDIS_REPLY_TYPE_INT,
+		array = REDIS_REPLY_TYPE_ARRAY
 	};
 
 	enum class string_type {
-		error = __CPP_REDIS_REPLY_ERR,
-		bulk_string = __CPP_REDIS_REPLY_BULK,
-		simple_string = __CPP_REDIS_REPLY_SIMPLE
+		error = REDIS_REPLY_TYPE_ERR,
+		bulk_string = REDIS_REPLY_TYPE_BULK,
+		simple_string = REDIS_REPLY_TYPE_SIMPLE
 	};
 
-public:
 	//! ctors
 	CRedisReply();
 	CRedisReply(const std::string& value, string_type reply_type);
@@ -68,19 +73,19 @@ public:
 	//! convenience function for error handling
 	bool ok() const;
 	bool ko() const;
-	const std::string& error() const;
+	std::string& error_desc();
 
 	//! convenience implicit conversion, same as !is_null()
 	operator bool() const;
 
 	//! Value getters
-	const std::vector<CRedisReply>& as_array() const;
-	const std::string& as_string() const;
+	std::vector<CRedisReply>& as_array();
+	std::string& as_string();
 	int64_t as_integer() const;
 
 	//! Value setters
 	void set();
-	void set(std::string& value, string_type reply_type);
+	void set(const std::string& value, string_type reply_type);
 	void set(int64_t value);
 	void set(std::vector<CRedisReply>& rows);
 	CRedisReply& operator<<(CRedisReply&& reply);
@@ -96,6 +101,6 @@ private:
 };
 
 //! support for output
-std::ostream& operator<<(std::ostream& os, const CRedisReply& reply);
+std::ostream& operator<<(std::ostream& os, CRedisReply&& reply);
 
 /*EOF*/
