@@ -41,3 +41,5 @@
 *.ilk
 *.db
 *.opendb
+
+*.ipch
