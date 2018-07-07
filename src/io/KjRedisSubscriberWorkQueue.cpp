@@ -182,7 +182,7 @@ CKjRedisSubscriberWorkQueue::Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStr
 */
 void
 CKjRedisSubscriberWorkQueue::taskFailed(kj::Exception&& exception) {
-	fprintf(stderr, "[CKjRedisSubscriberWorkQueue::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
+	fprintf(stderr, "\n[CKjRedisSubscriberWorkQueue::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
 	system("pause");
 	kj::throwFatalException(kj::mv(exception));
 }

@@ -18,22 +18,20 @@ public:
 	virtual ~CRedisService();
 
 public:
-	virtual void				RunOnce() {
+	virtual void				RunOnce() override {
 		_redisClient->RunOnce();
 		_redisSubscriber->RunOnce();
 	}
 
-	virtual IRedisClient&		Client() {
+	virtual IRedisClient&		Client() override {
 		return *_redisClient;
 	}
 
-	virtual IRedisSubscriber&	Subscriber() {
+	virtual IRedisSubscriber&	Subscriber() override {
 		return *_redisSubscriber;
 	}
 
-	virtual void				Release() {
-		delete this;
-	}
+	virtual void				Shutdown() override;
 
 public:
 	static void					Send(const std::vector<std::string>& vPiece, std::string& sOutSingleCommand, std::string& sOutAllCommands, int& nOutBuiltNum) {
@@ -53,6 +51,7 @@ public:
 
 private:
 	redis_stub_param_t _param;
+	bool _bShutdown = false;
 
 	IRedisClient *_redisClient;
 	IRedisSubscriber *_redisSubscriber;

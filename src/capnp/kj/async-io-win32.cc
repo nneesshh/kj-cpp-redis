@@ -963,11 +963,14 @@ public:
     {
       KJ_ON_SCOPE_FAILURE(closesocket(fd));
 
+	  // modified by n.lee to disable SO_REUSEADDR for release version
+#ifdef _DEBUG
       // We always enable SO_REUSEADDR because having to take your server down for five minutes
       // before it can restart really sucks.
       int optval = 1;
       KJ_WINSOCK(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
                             reinterpret_cast<char*>(&optval), sizeof(optval)));
+#endif
 
       addrs[0].bind(fd);
 

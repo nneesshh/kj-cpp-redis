@@ -63,7 +63,7 @@ write_redis_connection_crash_error(const char *err_txt) {
 #endif
 
 	FILE *ferr = fopen(log_file_name, "at+");
-	fprintf(ferr, "redis connection crashed:\n%s\n",
+	fprintf(ferr, "redis subscriber crashed:\n%s\n",
 		err_txt);
 	fclose(ferr);
 }
@@ -107,7 +107,7 @@ KjRedisSubscriberConn::OnClientConnect(KjTcpConnection&, uint64_t connid) {
 			std::placeholders::_1,
 			std::placeholders::_2)
 	);
-	_tasks->add(kj::mv(p1), "kjconn start read op");
+	_tasks->add(kj::mv(p1), "redis subscriber start read op");
 
 	// connection init
 	{
@@ -118,7 +118,7 @@ KjRedisSubscriberConn::OnClientConnect(KjTcpConnection&, uint64_t connid) {
 			if (cp._sn > 0
 				&& cp._state < CKjRedisSubscriberWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_PROCESS_OVER) {
 				// it is common cmd pipeline and not process over yest
-				dqTmp.push_back(std::move(cp));
+				dqTmp.emplace_back(std::move(cp));
 			}
 		}
 		_dqCommon.swap(dqTmp);
@@ -292,7 +292,7 @@ KjRedisSubscriberConn::Connect(const std::string& host, unsigned short port) {
 		std::bind(&KjRedisSubscriberConn::OnClientConnect, this, std::placeholders::_1, std::placeholders::_2),
 		std::bind(&KjRedisSubscriberConn::OnClientDisconnect, this, std::placeholders::_1, std::placeholders::_2)
 	);
-	_tasks->add(kj::mv(p1), "kjconn connect");
+	_tasks->add(kj::mv(p1), "redis subscriber connect");
 }
 
 //------------------------------------------------------------------------------
@@ -302,6 +302,25 @@ KjRedisSubscriberConn::Connect(const std::string& host, unsigned short port) {
 void
 KjRedisSubscriberConn::Disconnect() {
 	_kjconn.Disconnect();
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+KjRedisSubscriberConn&
+KjRedisSubscriberConn::Commit() {
+
+	if (_dqCommon.size() > 0) {
+		// stream write maybe trigger exception at once, so we must catch it manually
+		KJ_IF_MAYBE(e, kj::runCatchingExceptions(
+			[this]() {
+			_tasks->add(CommitLoop(), "commit loop");
+		})) {
+			taskFailed(kj::mv(*e));
+		}
+	}
+	return *this;
 }
 
 //------------------------------------------------------------------------------
@@ -330,7 +349,7 @@ KjRedisSubscriberConn::Init() {
 			nullptr);
 
 		//
-		_dqInit.push_back(std::move(cp));
+		_dqInit.emplace_back(std::move(cp));
 		sAllCommands.resize(0);
 		nBuiltNum = 0;
 	}
@@ -341,15 +360,25 @@ KjRedisSubscriberConn::Init() {
 
 */
 void
-KjRedisSubscriberConn::AutoReconnect() {
+KjRedisSubscriberConn::DelayReconnect() {
 	//
-	_tasks->add(_kjconn.DelayReconnect(), "kjconn delay reconnect");
+	const int nDelaySeconds = 3;
 
-	// 
-	for (auto& cp : _dqCommon) {
-		cp._state = CKjRedisSubscriberWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_QUEUEING;
+	if (!_bDelayReconnecting) {
+		_bDelayReconnecting = true;
+
+		fprintf(stderr, "[KjRedisClientConn::DelayReconnect()] connid(%08llu)host(%s)port(%d), reconnect after (%d) seconds...\n",
+			_kjconn.GetConnId(), _kjconn.GetHost().cStr(), _kjconn.GetPort(), nDelaySeconds);
+
+
+		auto p1 = _tioContext->AfterDelay(nDelaySeconds * kj::SECONDS, "reconnect")
+			.then([this]() {
+
+			_bDelayReconnecting = false;
+			return _kjconn.Reconnect();
+		});
+		_tasks->add(kj::mv(p1), "redis subscriber delay reconnect");
 	}
-	_committing_num = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -362,7 +391,7 @@ KjRedisSubscriberConn::CommitLoop() {
 		for (auto& cp : _dqCommon) {
 			if (CKjRedisSubscriberWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING == cp._state) {
 
-				_tasks->add(_kjconn.Write(cp._commands.c_str(), cp._commands.length()), "kjconn write commands");
+				_kjconn.Write(cp._commands.c_str(), cp._commands.length());
 
 				cp._state = CKjRedisSubscriberWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_COMMITTING;
 				++_committing_num;
@@ -373,7 +402,7 @@ KjRedisSubscriberConn::CommitLoop() {
 		return kj::READY_NOW;
 	}
 	else {
-		auto p1 = _tioContext->AfterDelay(1 * kj::SECONDS, "delay and commit loop")
+		auto p1 = _tioContext->AfterDelay(1 * kj::SECONDS, "redis subscriber commit loop")
 			.then([this]() {
 
 			return CommitLoop();
@@ -390,21 +419,29 @@ void
 KjRedisSubscriberConn::taskFailed(kj::Exception&& exception) {
 	char chDesc[1024];
 #if defined(__CYGWIN__) || defined( _WIN32)
-	_snprintf_s(chDesc, sizeof(chDesc), "[KjRedisSubscriberConn::taskFailed()] desc(%s) -- auto reconnect.\n",
+	_snprintf_s(chDesc, sizeof(chDesc), "\n[KjRedisSubscriberConn::taskFailed()] desc(%s) -- auto reconnect.\n",
 		exception.getDescription().cStr());
 #else
-	snprintf(chDesc, sizeof(chDesc), "[KjRedisSubscriberConn::taskFailed()] desc(%s) -- auto reconnect.\n",
+	snprintf(chDesc, sizeof(chDesc), "\n[KjRedisSubscriberConn::taskFailed()] desc(%s) -- auto reconnect.\n",
 		exception.getDescription().cStr());
 #endif
 	fprintf(stderr, chDesc);
 	write_redis_connection_crash_error(chDesc);
 
-	// force disconnect
-	Disconnect();
+	// force flush stream
+	_kjconn.FlushStream();
 
 	//
 	_builder.Reset();
-	AutoReconnect();
+
+	// 
+	for (auto& cp : _dqCommon) {
+		cp._state = CKjRedisSubscriberWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_QUEUEING;
+	}
+	_committing_num = 0;
+
+	//
+	DelayReconnect();
 }
 
 /** -- EOF -- **/

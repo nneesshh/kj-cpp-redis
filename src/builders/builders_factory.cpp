@@ -53,7 +53,7 @@ create_builder(char id) {
 static builder_iface *
 create_array_builder(char id) {
 	switch (id) {
-	case '*':
+	case KJ_REPLY_BUILDER_ARRAY_CHAR:
 		return new array_builder();
 
 	default:
@@ -65,7 +65,7 @@ create_array_builder(char id) {
 static builder_iface *
 create_sub_array_builder(char id) {
 	switch (id) {
-	case '*':
+	case KJ_REPLY_BUILDER_ARRAY_CHAR:
 		return new sub_array_builder();
 
 	default:
@@ -76,22 +76,24 @@ create_sub_array_builder(char id) {
 
 void
 create_builders(bool sub_array, std::vector<builder_iface *>& v_out) {
+	
+	builder_iface *builder_i = nullptr;
 	char ch;
 	for (ch = KJ_REPLY_BUILDER_SATRT_CHAR; ch <= KJ_REPLY_BUILDER_OVER_CHAR; ++ch) {
 
-		builder_iface *builder_i = nullptr;
-		if (sub_array) {
-			builder_i = create_sub_array_builder(ch);
+		if (KJ_REPLY_BUILDER_ARRAY_CHAR == ch) {
+			if (sub_array) {
+				builder_i = create_sub_array_builder(ch);
+			}
+			else {
+				builder_i = create_array_builder(ch);
+			}
 		}
 		else {
-			builder_i = create_array_builder(ch);
-		}
-
-		if (nullptr == builder_i) {
 			builder_i = create_builder(ch);
 		}
 
-		v_out.push_back(builder_i);
+		v_out.emplace_back(builder_i);
 	}
 }
 
@@ -114,7 +116,7 @@ create_dynamic_builder(char id) {
 		return new integer_builder();
 	case '$':
 		return new bulk_string_builder();
-	case '*':
+	case KJ_REPLY_BUILDER_ARRAY_CHAR:
 		return new sub_array_builder();
 
 	default:

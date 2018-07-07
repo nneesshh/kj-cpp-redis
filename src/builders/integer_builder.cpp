@@ -35,6 +35,11 @@ integer_builder::operator<<(bip_buf_t& bbuf) {
 	if (_reply_ready)
 		return *this;
 
+	auto buf_size = bip_buf_get_committed_size(&bbuf);
+	if (buf_size < 2)
+		return *this;
+
+	// wait for end_sequence
 	auto end_sequence = bip_buf_find_str(&bbuf, "\r\n", 2);
 	if (nullptr == end_sequence)
 		return *this;

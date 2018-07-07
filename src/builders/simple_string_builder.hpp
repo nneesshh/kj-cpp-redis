@@ -47,6 +47,9 @@ public:
 	CRedisReply&& get_reply();
 
 private:
+	void build_reply();
+
+private:
 	std::string _str;
 
 	bool _reply_ready = false;

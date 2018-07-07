@@ -87,7 +87,7 @@ CRedisReply::set(std::vector<CRedisReply>& rows) {
 CRedisReply&
 CRedisReply::operator<<(CRedisReply&& reply) {
 	_type = type::array;
-	_rows.push_back(std::move(reply));
+	_rows.emplace_back(std::move(reply));
 
 	return *this;
 }

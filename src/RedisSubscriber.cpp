@@ -73,8 +73,7 @@ CRedisSubscriber::CRedisSubscriber(kj::Own<KjSimpleIoContext> rootContext, redis
 
 */
 CRedisSubscriber::~CRedisSubscriber() {
-	_workQueue->Finish();
-	_trunkQueue->Close();
+	
 }
 
 //------------------------------------------------------------------------------
@@ -273,6 +272,16 @@ CRedisSubscriber::Pubsub(std::string& subcommand, std::vector<std::string>& vArg
 		//
 		vOut = std::move(reply.as_array());
 	}
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+void
+CRedisSubscriber::Shutdown() {
+	_workQueue->Finish();
+	_trunkQueue->Close();
 }
 
 //------------------------------------------------------------------------------

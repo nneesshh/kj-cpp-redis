@@ -36,6 +36,17 @@ array_builder::array_builder() {
 		_row_builder_i = _v_builder_i[(*begin_sequence) - KJ_REPLY_BUILDER_SATRT_CHAR];
 		bip_buf_decommit(&bbuf, 1);
 
+#ifdef _DEBUG
+		if (!_row_builder_i) {
+			std::string sDesc = "\n[cpp_redis::builders::array_builder()] row builder for ch(";
+			sDesc.append((char *)(begin_sequence), 1);
+			sDesc.append(") not exists -- pause!!!\n");
+			fprintf(stderr, sDesc.c_str());
+			system("pause");
+			throw std::exception(sDesc.c_str());
+		}
+#endif
+
 		*_row_builder_i << bbuf;
 		
 		if (_row_builder_i->reply_ready()) {

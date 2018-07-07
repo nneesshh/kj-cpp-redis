@@ -37,6 +37,7 @@ namespace builders {
 //!  $ for bulk strings
 //!  * for arrays
 #define KJ_REPLY_BUILDER_SATRT_CHAR	'$'	
+#define KJ_REPLY_BUILDER_ARRAY_CHAR	'*'	
 #define KJ_REPLY_BUILDER_OVER_CHAR	':'	
 
 void create_builders(bool sub_array, std::vector<builder_iface *>& v_out);

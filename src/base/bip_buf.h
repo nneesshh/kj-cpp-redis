@@ -21,7 +21,8 @@
 extern "C" {
 #endif 
 
-typedef struct bip_buf_s bip_buf_t;
+typedef struct bip_buf_s    bip_buf_t;
+
 
 extern INLINE bip_buf_t *	bip_buf_create(size_t capacity);
 extern INLINE void			bip_buf_destroy(bip_buf_t *bbuf);
@@ -49,6 +50,7 @@ extern void					bip_buf_commit(bip_buf_t *bbuf, size_t size);
 
 /* Decommits data from the in use block. */
 extern size_t				bip_buf_decommit(bip_buf_t *bbuf, size_t size);
+
 
 #ifdef __cplusplus 
 }

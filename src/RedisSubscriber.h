@@ -30,23 +30,25 @@ public:
 	};
 
 public:
-	virtual void				AddChannelMessageCb(const std::string& sName, const channel_message_cb_t& cb);
-	virtual void				RemoveChannelMessageCb(const std::string& sName);
+	virtual void				AddChannelMessageCb(const std::string& sName, const channel_message_cb_t& cb) override;
+	virtual void				RemoveChannelMessageCb(const std::string& sName) override;
 
-	virtual void				AddPatternMessageCb(const std::string& sName, const pattern_message_cb_t& cb);
-	virtual void				RemovePatternMessageCb(const std::string& sName);
+	virtual void				AddPatternMessageCb(const std::string& sName, const pattern_message_cb_t& cb) override;
+	virtual void				RemovePatternMessageCb(const std::string& sName) override;
 
-	virtual void				RunOnce() {
+	virtual void				RunOnce() override {
 		_trunkQueue->RunOnce();
 	}
 
-	virtual void				Subscribe(const std::string& channel);
-	virtual void				Psubscribe(const std::string& pattern);
-	virtual void				Unsubscribe(const std::string& channel);
-	virtual void				Punsubscribe(const std::string& pattern);
+	virtual void				Subscribe(const std::string& channel) override;
+	virtual void				Psubscribe(const std::string& pattern) override;
+	virtual void				Unsubscribe(const std::string& channel) override;
+	virtual void				Punsubscribe(const std::string& pattern) override;
 
-	virtual void				Publish(const std::string& channel, std::string& message);
-	virtual void				Pubsub(std::string& subcommand, std::vector<std::string>& vArg, RESULT_PAIR_LIST& vOut);
+	virtual void				Publish(const std::string& channel, std::string& message) override;
+	virtual void				Pubsub(std::string& subcommand, std::vector<std::string>& vArg, RESULT_PAIR_LIST& vOut) override;
+
+	virtual void				Shutdown() override;
 
 private:
 	void						Send(const std::vector<std::string>& vPiece);

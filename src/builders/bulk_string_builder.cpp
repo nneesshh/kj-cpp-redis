@@ -49,27 +49,47 @@ bulk_string_builder::fetch_size(bip_buf_t& bbuf) {
 
 	_str_size = (int)_head_builder.get_integer();
 	if (_str_size == -1) {
+		// "$-1\r\n" means null
 		_is_null = true;
 		build_reply();
 	}
 
+	// pre-alloc memory
+	_str.reserve(_str_size);
 	return true;
 }
 
 void
 bulk_string_builder::fetch_str(bip_buf_t& bbuf) {
-	size_t sz = bip_buf_get_committed_size(&bbuf);
-	if (sz < static_cast<std::size_t>(_str_size) + 2) // also wait for end sequence
+	if (_reply_ready)
 		return;
 
+	auto buf_size = bip_buf_get_committed_size(&bbuf);
 	auto begin_sequence = bip_buf_get_contiguous_block(&bbuf);
-	if (begin_sequence[_str_size] != '\r' || begin_sequence[_str_size + 1] != '\n') {
-		throw CRedisError("Wrong ending sequence");
+	auto want_size = _str_size + 2 - _str.length();
+	size_t consume_size = 0;
+
+	// consume
+	if (buf_size < want_size) {
+		consume_size = buf_size;
+		_str.append(begin_sequence, consume_size);
+	}
+	else {
+		consume_size = want_size;
+		_str.append(begin_sequence, consume_size);
+
+		// validate end sequence
+		auto end_sequence = _str.c_str() + _str_size;
+		if (end_sequence[0] != '\r' || end_sequence[1] != '\n') {
+			throw CRedisError("Wrong ending sequence");
+		}
+
+		// strip end sequence
+		_str.resize(_str_size - 2);
+		build_reply();
 	}
 
-	_str = std::string(begin_sequence, begin_sequence + _str_size);
-	bip_buf_decommit(&bbuf, _str_size + 2);
-	build_reply();
+	bip_buf_decommit(&bbuf, consume_size);
 }
 
 builder_iface&

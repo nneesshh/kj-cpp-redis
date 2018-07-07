@@ -5,7 +5,7 @@
 
 (C) 2016 n.lee
 */
-#include "base/CamelWorkQueue.h"
+#include "base/CamelReaderWriterQueue.h"
 #include "base/IRedisService.h"
 
 //------------------------------------------------------------------------------
@@ -32,7 +32,7 @@ public:
 	void Add(redis_reply_cb_t&&, CRedisReply&&);
 
 private:
-	CCamelWorkQueuePtr _workQueue;
+	CCamelReaderWriterQueuePtr _workQueue;
 };
 using CRedisTrunkQueuePtr = std::shared_ptr<CRedisTrunkQueue>;
 

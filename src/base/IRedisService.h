@@ -29,8 +29,7 @@ public:
 	virtual IRedisClient&		Client() = 0;
 	virtual IRedisSubscriber&	Subscriber() = 0;
 
-	virtual void				Release() = 0;
-
+	virtual void				Shutdown() = 0;
 };
 
 class IRedisClient {
@@ -79,6 +78,8 @@ public:
 	virtual void				Eval(const std::string& script, std::vector<std::string>& vKey, std::vector<std::string>& vArg) = 0;
 	virtual void				EvalSha(const std::string& sha, std::vector<std::string>& vKey, std::vector<std::string>& vArg) = 0;
 
+	virtual void				Shutdown() = 0;
+
 };
 
 class IRedisSubscriber {
@@ -105,6 +106,8 @@ public:
 
 	virtual void				Publish(const std::string& channel, std::string& message) = 0;
 	virtual void				Pubsub(std::string& subcommand, std::vector<std::string>& vArg, RESULT_PAIR_LIST& vOut) = 0;
+
+	virtual void				Shutdown() = 0;
 
 };
 

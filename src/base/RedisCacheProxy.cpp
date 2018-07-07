@@ -30,7 +30,7 @@ static split(const char *str, int str_len, char **av, int av_max, char c) {
 	return count;
 }
 
-static std::string s_sClear = "a62f6f595b70680a5254ed15e60c70f014db5673";
+static std::string s_sClear = "1c27246d5d75511672278f86ee4c9f6e99d24933";
 static std::string s_sAddToHashTable = "a8d615469756372f54afe628741bb24a849ffd87";
 static std::string s_sRemoveFromHashTable = "083d4a41ce0aadd3c1fec3814c696c90e7054fa1";
 static std::string s_sUpdateToHashTable = "7f7aa689771b168e16ed22be7c57509d762da668";
@@ -42,7 +42,7 @@ static std::string s_sBatchGet = "9f933ffa06536249e817a9cd91a100e548009375";
 
 //////////////////////////////////////////////////////////////////////////
 static std::map<std::string, std::string> s_mapScript = {
-	{ s_sClear,					"local d=redis.call('SMEMBERS',KEYS[3]);local n=(d and #d) or 0;if n>0 then return false;else redis.call('HDEL',KEYS[4],KEYS[1]);redis.call('DEL',KEYS[3]);redis.call('DEL',KEYS[2]);redis.call('DEL',KEYS[1]);return true;end" },
+	{ s_sClear,					"local n=redis.call('SCARD',KEYS[3]);if n>0 then return false;else redis.call('HDEL',KEYS[4],KEYS[1]);redis.call('DEL',KEYS[3]);redis.call('DEL',KEYS[2]);redis.call('DEL',KEYS[1]);return true;end" },
 	{ s_sAddToHashTable,		"redis.call('HSET',KEYS[1],ARGV[1],ARGV[2]);redis.call('SADD',KEYS[2],ARGV[1])" },
 	{ s_sRemoveFromHashTable,	"redis.call('HDEL',KEYS[1],ARGV[1]);redis.call('SREM',KEYS[2],ARGV[1]);redis.call('SREM',KEYS[3],ARGV[1])" },
 	{ s_sUpdateToHashTable,		"redis.call('HSET',KEYS[1],ARGV[1],ARGV[2]);redis.call('SADD',KEYS[2],ARGV[1]);redis.call('SADD',KEYS[3],ARGV[1]);redis.call('HSET',KEYS[4],KEYS[1],KEYS[3])" },
@@ -110,10 +110,16 @@ CRedisCacheProxy::Clear() {
 	if (reply.ok()
 		&& reply.is_null()) {
 		// null means false
-		fprintf(stderr, "[CRedisCacheProxy::Clear()] Hash(%s) is dirty, you must clean it first before -- Clear() --!!!!",
+		fprintf(stderr, "[CRedisCacheProxy::Clear()] cache(%s) is dirty, you must dump the changes to db first before clear it!!!!",
 			_sIdHash.c_str());
 		system("pause");
 		exit(-1);
+	}
+	else if (reply.is_error()) {
+		std::string sDesc = "[CRedisCacheProxy::Clear()] error(";
+		sDesc += reply.error_desc().c_str();
+		sDesc += ")!!!";
+		throw std::exception(sDesc.c_str());
 	}
 }
 
@@ -141,7 +147,7 @@ CRedisCacheProxy::AddToHashTable(const std::string& sId, std::string& sValue) {
 	redisservice->Client().EvalSha(
 		s_sAddToHashTable,
 		std::vector<std::string>{ _sIdHash, _sIdSetOfAllKeys },
-		std::vector<std::string>{ std::move(sId), std::move(sValue) }
+		std::vector<std::string>{ sId, std::move(sValue) }
 	);
 }
 
@@ -157,7 +163,7 @@ CRedisCacheProxy::RemoveFromHashTable(const std::string& sId) {
 	redisservice->Client().EvalSha(
 		s_sRemoveFromHashTable,
 		std::vector<std::string>{ _sIdHash, _sIdSetOfAllKeys, _sIdSetOfDirtyKeys },
-		std::vector<std::string>{ std::move(sId) }
+		std::vector<std::string>{ sId }
 	);
 }
 
@@ -173,7 +179,7 @@ CRedisCacheProxy::UpdateToHashTable(const std::string& sId, std::string& sValue)
 	redisservice->Client().EvalSha(
 		s_sUpdateToHashTable,
 		std::vector<std::string>{ _sIdHash, _sIdSetOfAllKeys, _sIdSetOfDirtyKeys, entry->_cacheDirtyEntry },
-		std::vector<std::string>{ std::move(sId), std::move(sValue) }
+		std::vector<std::string>{ sId, std::move(sValue) }
 	);
 }
 
@@ -194,6 +200,14 @@ CRedisCacheProxy::Get(const std::string& sId) {
 		//
 		return reply.as_string();
 	}
+	else if (reply.is_error()) {
+		std::string sDesc = "[CRedisCacheProxy::Get()] id(";
+		sDesc += sId.c_str();
+		sDesc += ") -- error(";
+		sDesc += reply.error_desc().c_str();
+		sDesc += ")!!!";
+		throw std::exception(sDesc.c_str());
+	}
 	return "";
 }
 
@@ -213,6 +227,12 @@ CRedisCacheProxy::GetAll(RESULT_PAIR_LIST& vOut) {
 		&& reply.is_array()) {
 		//
 		vOut = std::move(reply.as_array());
+	}
+	else if (reply.is_error()) {
+		std::string sDesc = "[CRedisCacheProxy::GetAll()] error(";
+		sDesc += reply.error_desc().c_str();
+		sDesc += ")!!!";
+		throw std::exception(sDesc.c_str());
 	}
 }
 
@@ -236,6 +256,12 @@ CRedisCacheProxy::GetPartitial(int nCount, RESULT_PAIR_LIST& vOut) {
 		&& reply.is_array()) {
 		//
 		vOut = std::move(reply.as_array());
+	}
+	else if (reply.is_error()) {
+		std::string sDesc = "[CRedisCacheProxy::GetPartitial()] error(";
+		sDesc += reply.error_desc().c_str();
+		sDesc += ")!!!";
+		throw std::exception(sDesc.c_str());
 	}
 }
 
@@ -276,6 +302,12 @@ CRedisCacheProxy::LootDirtyEntry(void *service_entry, DIRTY_ENTRY_LIST& vOut) {
 		//
 		vOut = std::move(reply.as_array());
 	}
+	else if (reply.is_error()) {
+		std::string sDesc = "[CRedisCacheProxy::LootDirtyEntry()] error(";
+		sDesc += reply.error_desc().c_str();
+		sDesc += ")!!!";
+		throw std::exception(sDesc.c_str());
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -304,6 +336,12 @@ CRedisCacheProxy::BatchGet(void *service_entry, CRedisHashTableBatchGetter& gett
 			getter._vCb[i](v[i]);
 		}
 	}
+	else if (reply.is_error()) {
+		std::string sDesc = "[CRedisCacheProxy::BatchGet()] error(";
+		sDesc += reply.error_desc().c_str();
+		sDesc += ")!!!";
+		throw std::exception(sDesc.c_str());
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -326,6 +364,13 @@ CRedisCacheProxy::BatchGetAsync(void *service_entry, CRedisHashTableBatchGetter&
 				vCb[i](v[i]);
 			}
 		}
+		else if (reply.is_error()) {
+			std::string sDesc = "[CRedisCacheProxy::BatchGetAsync()] error(";
+			sDesc += reply.error_desc().c_str();
+			sDesc += ")!!!";
+			throw std::exception(sDesc.c_str());
+		}
+
 	}, std::move(getter._vCb), std::placeholders::_1);
 
 	redisservice->Client().EvalSha(

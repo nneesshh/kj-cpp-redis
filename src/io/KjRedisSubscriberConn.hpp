@@ -52,17 +52,12 @@ public:
 	//! send cmd pipeline
 	KjRedisSubscriberConn& Send(CKjRedisSubscriberWorkQueue::cmd_pipepline_t& cp) {
 		cp._state = CKjRedisSubscriberWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING;
-		_dqCommon.push_back(std::move(cp));
+		_dqCommon.emplace_back(std::move(cp));
 		return *this;
 	}
 
 	//! commit pipelined transaction
-	KjRedisSubscriberConn& Commit() {
-		if (_dqCommon.size() > 0) {
-			_tasks->add(CommitLoop(), "commit loop");
-		}
-		return *this;
-	}
+	KjRedisSubscriberConn& Commit();
 
 	//! queued cmd pipeline size
 	size_t UncommittedSize() {
@@ -74,7 +69,7 @@ private:
 	void Init();
 
 	//! 
-	void AutoReconnect();
+	void DelayReconnect();
 
 	//! 
 	kj::Promise<void> CommitLoop();
@@ -98,6 +93,7 @@ private:
 	KjTcpConnection _kjconn;
 	cpp_redis::builders::KjReplyBuilder _builder;
 
+	bool _bDelayReconnecting = false;
 };
 
 /*EOF*/

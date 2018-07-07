@@ -36,8 +36,7 @@ KjTcpConnection::KjTcpConnection(kj::Own<KjSimpleThreadIoContext> tioContext, ui
 
 */
 KjTcpConnection::~KjTcpConnection() {
-	Disconnect();
-
+	FlushStream();
 	bip_buf_destroy(_bbuf);
 }
 
@@ -84,7 +83,6 @@ KjTcpConnection::Connect(
 		.then([this](kj::Own<kj::NetworkAddress>&& addr) {
 
 		_addr = kj::mv(addr);
-
 		return StartConnect();
 	}).exclusiveJoin(DisconnectWatcher());
 	return kj::mv(p1);
@@ -94,11 +92,23 @@ KjTcpConnection::Connect(
 /**
 
 */
-kj::Promise<void>
-KjTcpConnection::Write(const void* buffer, size_t size) {
-	auto p1 = _stream->write(buffer, size)
-		.exclusiveJoin(DisconnectWatcher());
-	return kj::mv(p1);
+void
+KjTcpConnection::Disconnect() {
+	//
+	if (_bConnected) {
+		_bConnected = false;
+
+		if (_connAttach._disconnectCb)
+			_connAttach._disconnectCb(*this, _connid);
+	}
+
+	// stream disconnect means disposed
+	if (!_bDisposed) {
+		_bDisposed = true;
+
+		// flush stream
+		FlushStream();
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -106,19 +116,40 @@ KjTcpConnection::Write(const void* buffer, size_t size) {
 
 */
 void
-KjTcpConnection::Disconnect() {
-	if (_bIsConnected) {
-		//
-		_bIsConnected = false;
+KjTcpConnection::FlushStream() {
 
-		//
-		OnDisconnect();
-
-		//
+	if (_stream) {
 		_stream->abortRead();
 		_stream->shutdownWrite();
-		_disconnectFulfiller->fulfill();
+		_stream = nullptr;
 	}
+
+	if (_disconnectFulfiller) {
+		_disconnectFulfiller->fulfill();
+		_disconnectFulfiller = nullptr;
+	}
+
+	// clear bbuf
+	bip_buf_reset(_bbuf);
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+kj::Promise<void>
+KjTcpConnection::Reconnect() {
+
+	assert(!_bDisposed);
+
+	if (!_disconnectFulfiller) {
+		auto paf = kj::newPromiseAndFulfiller<void>();
+		_disconnectPromise = paf.promise.fork();
+		_disconnectFulfiller = kj::mv(paf.fulfiller);
+	}
+
+	return StartConnect()
+		.exclusiveJoin(DisconnectWatcher());
 }
 
 //------------------------------------------------------------------------------
@@ -137,67 +168,22 @@ KjTcpConnection::StartReadOp(const READ_CB& readCb) {
 
 */
 kj::Promise<void>
-KjTcpConnection::DelayReconnect() {
-
-	if (_bIsConnected) {
-		//
-		_bIsConnected = false;
-
-		//
-		OnDisconnect();
-	}
-	return Reconnect();
-}
-
-//------------------------------------------------------------------------------
-/**
-
-*/
-kj::Promise<void>
 KjTcpConnection::StartConnect() {
 
 	return _addr->connect()
 		.then([this](kj::Own<kj::AsyncIoStream>&& stream) {
 
 		_stream = kj::mv(stream);
-		_bIsConnected = true;
+		_bConnected = true;
 
-		fprintf(stderr, "Connect ok.\n");
+		fprintf(stderr, "Connect ok -- connid(%08llu)host(%s)port(%d).\n",
+			GetConnId(), GetHost().cStr(), GetPort());
 		
 		if (_connAttach._connectCb) {
 			_connAttach._connectCb(*this, _connid);
 		}
 
 	});
-}
-
-//------------------------------------------------------------------------------
-/**
-
-*/
-kj::Promise<void>
-KjTcpConnection::Reconnect() {
-	const unsigned int uDelaySeconds = 3;
-
-	auto paf = kj::newPromiseAndFulfiller<void>();
-	_disconnectPromise = paf.promise.fork();
-	_disconnectFulfiller = kj::mv(paf.fulfiller);
-
-	if (!_bIsReconnecting) {
-
-		_bIsReconnecting = true;
-
-		fprintf(stderr, "[KjTcpConnection::Reconnect()] host(%s)port(%d), reconnect after (%d) seconds...\n",
-			_host.cStr(), _port, uDelaySeconds);
-
-		return _tioContext->AfterDelay(uDelaySeconds * kj::SECONDS, "reconnect")
-			.then([this]() {
-
-			_bIsReconnecting = false;
-			return StartConnect();
-		});
-	}
-	return kj::READY_NOW;
 }
 
 //------------------------------------------------------------------------------

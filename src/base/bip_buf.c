@@ -202,9 +202,9 @@ bip_buf_get_contiguous_block(const bip_buf_t *bbuf) {
 */
 char *
 bip_buf_find_str(const bip_buf_t *bbuf, const char *str, size_t str_len) {
-	char *start = bip_buf_get_contiguous_block(bbuf);
-	size_t start_sz = bip_buf_get_committed_size(bbuf);
-	return fast_strstr(start, start_sz, str, str_len);
+	char *buf_start = bip_buf_get_contiguous_block(bbuf);
+	size_t buf_size = bip_buf_get_committed_size(bbuf);
+	return fast_strstr(buf_start, buf_size, str, str_len);
 }
 
 /**------------------------------------------------------------------------------
@@ -259,8 +259,8 @@ bip_buf_force_reserve(bip_buf_t *bbuf, size_t *size) {
 		// we always allocate reserve space after A.
 		size_t freespace = bip_buf_get_free_space(bbuf);
 		if ((*size) > freespace) {
-			size_t sz = bip_buf_get_committed_size(bbuf);
-			if (0 == sz) {
+			size_t buf_size = bip_buf_get_committed_size(bbuf);
+			if (0 == buf_size) {
 				bbuf->_available_capacity = next_power_of_two(bbuf->_available_capacity + (*size));
 				bbuf->_buffer = malloc(bbuf->_available_capacity * 2);
 
@@ -270,11 +270,11 @@ bip_buf_force_reserve(bip_buf_t *bbuf, size_t *size) {
 				char *tmp = bbuf->_buffer;
 				bbuf->_available_capacity = next_power_of_two(bbuf->_available_capacity + (*size));
 				bbuf->_buffer = malloc(bbuf->_available_capacity * 2);
-				memcpy(bbuf->_buffer, tmp + bbuf->_a_start, sz);
+				memcpy(bbuf->_buffer, tmp + bbuf->_a_start, buf_size);
 				free(tmp);
 
 				bbuf->_a_start = 0;
-				bbuf->_a_end = sz;
+				bbuf->_a_end = buf_size;
 			}
 		}
 

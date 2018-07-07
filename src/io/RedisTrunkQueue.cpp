@@ -9,7 +9,7 @@
 
 */
 CRedisTrunkQueue::CRedisTrunkQueue()
-	: _workQueue(std::make_shared<CCamelConcurrentWorkQueue>()) {
+	: _workQueue(std::make_shared<CCamelReaderWriterQueue>()) {
 
 }
 

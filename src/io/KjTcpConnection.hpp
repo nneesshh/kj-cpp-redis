@@ -32,11 +32,6 @@ public:
 	bool operator==(const KjTcpConnection& rhs) const;
 	bool operator!=(const KjTcpConnection& rhs) const;
 
-	//! returns whether the connection is currently connected or not
-	bool IsConnected() const {
-		return _bIsConnected;
-	}
-
 	//! 
 	kj::Promise<void> Connect(
 		kj::StringPtr host,
@@ -45,10 +40,19 @@ public:
 		DISCONNECT_CB disconnectCb);
 
 	//! 
-	kj::Promise<void> Write(const void* buffer, size_t size);
+	void Write(const void* buffer, size_t size) {
+		if (_stream)
+			_stream->write(buffer, size);
+	}
 
 	//! 
 	void Disconnect();
+
+	//! 
+	void FlushStream();
+
+	//!
+	kj::Promise<void> Reconnect();
 
 	//! 
 	kj::Promise<void> StartReadOp(const READ_CB& readCb);
@@ -58,23 +62,27 @@ public:
 		return _disconnectPromise.addBranch();
 	}
 
-	//! 
-	kj::Promise<void> DelayReconnect();
+	//! returns whether the connection is currently connected or not
+	bool IsConnected() const {
+		return _bConnected;
+	}
+
+	uint64_t GetConnId() {
+		return _connid;
+	}
+
+	kj::StringPtr GetHost() {
+		return _host;
+	}
+
+	kj::uint GetPort() {
+		return _port;
+	}
 
 private:
 	//! operation
 	kj::Promise<void> StartConnect();
-	kj::Promise<void> Reconnect();
 	kj::Promise<void> AsyncReadLoop();
-
-	//!
-	void OnDisconnect() {
-		// clear bbuf
-		bip_buf_reset(_bbuf);
-
-		if (_connAttach._disconnectCb)
-			_connAttach._disconnectCb(*this, _connid);
-	}
 
 public:
 	kj::Own<KjSimpleThreadIoContext> _tioContext;
@@ -92,8 +100,9 @@ private:
 	conn_attach_t _connAttach;
 	bip_buf_t *_bbuf = nullptr;
 
-	bool _bIsConnected = false;
-	bool _bIsReconnecting = false;
+	bool _bConnected = false;
+	bool _bDisposed = false;
+
 };
 
 /*EOF*/

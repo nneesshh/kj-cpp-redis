@@ -31,11 +31,26 @@ CRedisService::CRedisService(redis_stub_param_t *param)
 
 */
 CRedisService::~CRedisService() {
+
 	delete _redisClient;
 	delete _redisSubscriber;
 
 	//
 	s_rootContext = nullptr;
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+void
+CRedisService::Shutdown() {
+	if (!_bShutdown) {
+		_bShutdown = true;
+
+		_redisClient->Shutdown();
+		_redisSubscriber->Shutdown();
+	}
 }
 
 /** -- EOF -- **/

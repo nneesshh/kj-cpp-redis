@@ -37,8 +37,7 @@ CRedisClient::CRedisClient(kj::Own<KjSimpleIoContext> rootContext, redis_stub_pa
 
 */
 CRedisClient::~CRedisClient() {
-	_workQueue->Finish();
-	_trunkQueue->Close();
+	
 }
 
 //------------------------------------------------------------------------------
@@ -116,6 +115,16 @@ CRedisClient::BlockingCommit() {
 
 	prms->get_future().get();
 	return reply;
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+void
+CRedisClient::Shutdown() {
+	_workQueue->Finish();
+	_trunkQueue->Close();
 }
 
 /** -- EOF -- **/

@@ -176,7 +176,7 @@ CKjRedisClientWorkQueue::Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream&
 */
 void
 CKjRedisClientWorkQueue::taskFailed(kj::Exception&& exception) {
-	fprintf(stderr, "[CKjRedisClientWorkQueue::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
+	fprintf(stderr, "\n[CKjRedisClientWorkQueue::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
 	system("pause");
 	kj::throwFatalException(kj::mv(exception));
 }

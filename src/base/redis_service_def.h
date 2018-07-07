@@ -17,7 +17,6 @@ struct redis_service_entry_t {
 	redis_stub_param_t _param;
 	void *_redisservice;
 
-	std::string _preloadFlagEntry;
 	std::string _cacheDirtyEntry;
 	std::string _listDirtyEntry;
 	int _dumpInterval;
