@@ -91,7 +91,7 @@ public:
 	static void					SplitIdList(const std::string& sIdList, std::string& sOutModuleName, std::string& sOutMainId, std::string& sOutSubid);
 	static void					LootDirtyEntry(void *service_entry, DIRTY_ENTRY_LIST& vOut);
 
-	static void					Restore(void *service_entry, std::string& sIdList, std::string& sListVal, std::string& sIdHashOfCAS, std::string& sHashOfCASVal);
+	static void					Restore(void *service_entry, std::string& sIdList, std::string& sListVal, std::string& sIdHashOfCAS, std::string& sCASVal);
 
 	static const std::map<std::string, std::string>& MapScript();
 

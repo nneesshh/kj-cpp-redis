@@ -45,8 +45,8 @@ public:
 	}
 
 	template <typename Func>
-	kj::PromiseForResult<Func, void> EvalLater(Func func) {
-		return kj::evalLater(func);
+	kj::PromiseForResult<Func, void> EvalForResult(Func&& func) {
+		return kj::evalLater(kj::mv(func));
 	}
 
 	template <typename T>
@@ -62,20 +62,23 @@ public:
 		return kj::heap<kj::TaskSet>(errorHandler);
 	}
 
+	void                        AddTask(kj::Promise<void>&& promise, const char *name) {
+		_defaultTasks->add(kj::mv(promise), name);
+	}
+
 	kj::AsyncIoProvider::PipeThread NewPipeThread(kj::Function<void(kj::AsyncIoProvider&, kj::AsyncIoStream&, kj::WaitScope&)>&& startFunc) {
 		return _ioProvider.newPipeThread(kj::mv(startFunc));
 	}
 
 private:
-	void taskFailed(kj::Exception&& exception) override {
-		fprintf(stderr, "[KjSimpleThreadIoContext::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
-		system("pause");
-		kj::throwFatalException(kj::mv(exception));
-	}
+	void taskFailed(kj::Exception&& exception) override;
 
 	kj::AsyncIoProvider& _ioProvider;
 	kj::AsyncIoStream& _stream;
 	kj::WaitScope& _waitScope;
+
+	kj::Own<kj::TaskSet> _defaultTasks;
+
 };
 
 /*EOF*/

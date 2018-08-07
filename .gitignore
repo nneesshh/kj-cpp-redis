@@ -42,4 +42,8 @@
 *.db
 *.opendb
 
-*.ipch
+build/\.vs/
+
+lib/Debug/
+
+lib/Release/

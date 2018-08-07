@@ -12,10 +12,42 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\base\bip_buf.h" />
-    <ClInclude Include="..\src\base\CamelWorkQueue.h" />
+    <ClInclude Include="..\src\base\CamelReaderWriterQueue.h" />
     <ClInclude Include="..\src\base\concurrent\atomicops.h" />
     <ClInclude Include="..\src\base\concurrent\readerwriterqueue.h" />
+    <ClInclude Include="..\src\base\crc64.h" />
+    <ClInclude Include="..\src\base\endian.h" />
+    <ClInclude Include="..\src\base\fast_memcpy.h" />
     <ClInclude Include="..\src\base\IRedisService.h" />
+    <ClInclude Include="..\src\base\mysnprintf.h" />
+    <ClInclude Include="..\src\base\nx_array.h" />
+    <ClInclude Include="..\src\base\nx_buf.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_body.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_dumped_data.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_factory.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_footer.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_hash_or_zset_value.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_header.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_helper.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_intset_value.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_list_or_set_value.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_lzf_string_value.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_opcode_aux.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_object_detail_kv.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_object_detail_kv_val.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_string_value.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_zipmap_value.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_zl_hash_value.h" />
+    <ClInclude Include="..\src\base\rdb_parser\build_zl_list_value.h" />
+    <ClInclude Include="..\src\base\rdb_parser\intset.h" />
+    <ClInclude Include="..\src\base\rdb_parser\lzf.h" />
+    <ClInclude Include="..\src\base\rdb_parser\lzfP.h" />
+    <ClInclude Include="..\src\base\rdb_parser\rdb.h" />
+    <ClInclude Include="..\src\base\rdb_parser\rdb_object_builder.h" />
+    <ClInclude Include="..\src\base\rdb_parser\rdb_parser.h" />
+    <ClInclude Include="..\src\base\rdb_parser\rdb_parser_def.h" />
+    <ClInclude Include="..\src\base\rdb_parser\ziplist.h" />
+    <ClInclude Include="..\src\base\rdb_parser\zipmap.h" />
     <ClInclude Include="..\src\base\RedisCacheProxy.h" />
     <ClInclude Include="..\src\base\RedisError.h" />
     <ClInclude Include="..\src\base\RedisListProxy.h" />
@@ -23,14 +55,16 @@
     <ClInclude Include="..\src\base\RedisReply.h" />
     <ClInclude Include="..\src\base\redis_service_def.h" />
     <ClInclude Include="..\src\base\platform_types.h" />
-    <ClInclude Include="..\src\builders\array_builder.hpp" />
-    <ClInclude Include="..\src\builders\builders_factory.hpp" />
-    <ClInclude Include="..\src\builders\builder_iface.hpp" />
-    <ClInclude Include="..\src\builders\bulk_string_builder.hpp" />
-    <ClInclude Include="..\src\builders\error_builder.hpp" />
-    <ClInclude Include="..\src\builders\integer_builder.hpp" />
-    <ClInclude Include="..\src\builders\simple_string_builder.hpp" />
-    <ClInclude Include="..\src\builders\sub_array_builder.hpp" />
+    <ClInclude Include="..\src\base\reply_parser\reply_builder.h" />
+    <ClInclude Include="..\src\base\reply_parser\reply_parser.h" />
+    <ClInclude Include="..\src\base\reply_parser\reply_parser_def.h" />
+    <ClInclude Include="..\src\base\reply_parser\r_build_array.h" />
+    <ClInclude Include="..\src\base\reply_parser\r_build_bulk_string.h" />
+    <ClInclude Include="..\src\base\reply_parser\r_build_factory.h" />
+    <ClInclude Include="..\src\base\reply_parser\reply_build_helper.h" />
+    <ClInclude Include="..\src\base\reply_parser\r_build_integer.h" />
+    <ClInclude Include="..\src\base\reply_parser\r_build_reply.h" />
+    <ClInclude Include="..\src\base\reply_parser\r_build_simple_string.h" />
     <ClInclude Include="..\src\io\KjRedisClientConn.hpp" />
     <ClInclude Include="..\src\io\KjRedisClientWorkQueue.hpp" />
     <ClInclude Include="..\src\io\KjRedisSubscriberConn.hpp" />
@@ -41,17 +75,56 @@
     <ClInclude Include="..\src\io\KjTcpConnection.hpp" />
     <ClInclude Include="..\src\io\RedisTrunkQueue.h" />
     <ClInclude Include="..\src\RedisClient.h" />
+    <ClInclude Include="..\src\RedisCommandBuilder.h" />
     <ClInclude Include="..\src\RedisService.h" />
     <ClInclude Include="..\src\RedisSubscriber.h" />
     <ClInclude Include="..\src\UsingRedisService.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\base\bip_buf.c" />
-    <ClCompile Include="..\src\base\CamelWorkQueue.cpp" />
+    <ClCompile Include="..\src\base\CamelReaderWriterQueue.cpp" />
+    <ClCompile Include="..\src\base\crc64.c" />
+    <ClCompile Include="..\src\base\endian.c" />
+    <ClCompile Include="..\src\base\fast_memcpy.c" />
+    <ClCompile Include="..\src\base\mysnprintf.c" />
+    <ClCompile Include="..\src\base\nx_array.c" />
+    <ClCompile Include="..\src\base\nx_buf.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_body.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_dumped_data.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_factory.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_footer.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_hash_or_zset_value.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_header.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_helper.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_intset_value.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_list_or_set_value.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_lzf_string_value.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_opcode_aux.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_object_detail_kv.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_object_detail_kv_val.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_string_value.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_zipmap_value.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_zl_hash_value.c" />
+    <ClCompile Include="..\src\base\rdb_parser\build_zl_list_value.c" />
+    <ClCompile Include="..\src\base\rdb_parser\intset.c" />
+    <ClCompile Include="..\src\base\rdb_parser\lzf_d.c" />
+    <ClCompile Include="..\src\base\rdb_parser\rdb_object_builder.c" />
+    <ClCompile Include="..\src\base\rdb_parser\rdb_parser.c" />
+    <ClCompile Include="..\src\base\rdb_parser\ziplist.c" />
+    <ClCompile Include="..\src\base\rdb_parser\zipmap.c" />
     <ClCompile Include="..\src\base\RedisCacheProxy.cpp" />
     <ClCompile Include="..\src\base\RedisListProxy.cpp" />
     <ClCompile Include="..\src\base\RedisRankingProxy.cpp" />
     <ClCompile Include="..\src\base\RedisReply.cpp" />
+    <ClCompile Include="..\src\base\reply_parser\reply_builder.c" />
+    <ClCompile Include="..\src\base\reply_parser\reply_parser.c" />
+    <ClCompile Include="..\src\base\reply_parser\r_build_array.c" />
+    <ClCompile Include="..\src\base\reply_parser\r_build_bulk_string.c" />
+    <ClCompile Include="..\src\base\reply_parser\r_build_factory.c" />
+    <ClCompile Include="..\src\base\reply_parser\reply_build_helper.c" />
+    <ClCompile Include="..\src\base\reply_parser\r_build_integer.c" />
+    <ClCompile Include="..\src\base\reply_parser\r_build_reply.c" />
+    <ClCompile Include="..\src\base\reply_parser\r_build_simple_string.c" />
     <ClCompile Include="..\src\capnp\kj\arena.cc" />
     <ClCompile Include="..\src\capnp\kj\array.cc" />
     <ClCompile Include="..\src\capnp\kj\async-io-win32.cc" />
@@ -72,13 +145,6 @@
     <ClCompile Include="..\src\capnp\kj\thread.cc" />
     <ClCompile Include="..\src\capnp\kj\time.cc" />
     <ClCompile Include="..\src\capnp\kj\units.cc" />
-    <ClCompile Include="..\src\builders\array_builder.cpp" />
-    <ClCompile Include="..\src\builders\builders_factory.cpp" />
-    <ClCompile Include="..\src\builders\bulk_string_builder.cpp" />
-    <ClCompile Include="..\src\builders\error_builder.cpp" />
-    <ClCompile Include="..\src\builders\integer_builder.cpp" />
-    <ClCompile Include="..\src\builders\simple_string_builder.cpp" />
-    <ClCompile Include="..\src\builders\sub_array_builder.cpp" />
     <ClCompile Include="..\src\io\KjRedisClientConn.cpp" />
     <ClCompile Include="..\src\io\KjRedisClientWorkQueue.cpp" />
     <ClCompile Include="..\src\io\KjRedisSubscriberConn.cpp" />
@@ -89,6 +155,7 @@
     <ClCompile Include="..\src\io\KjTcpConnection.cpp" />
     <ClCompile Include="..\src\io\RedisTrunkQueue.cpp" />
     <ClCompile Include="..\src\RedisClient.cpp" />
+    <ClCompile Include="..\src\RedisCommandBuilder.cpp" />
     <ClCompile Include="..\src\RedisService.cpp" />
     <ClCompile Include="..\src\RedisServicePlugin.cpp" />
     <ClCompile Include="..\src\RedisSubscriber.cpp" />
@@ -132,7 +199,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Link>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\Visual Leak Detector\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
       <ShowProgress>NotSet</ShowProgress>
@@ -143,7 +210,7 @@
       <ImportLibrary>$(ProjectDir)..\lib\$(Configuration)\$(TargetName).lib</ImportLibrary>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>../src;../src/capnp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src;../src/capnp;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;HAVE_STRUCT_TIMESPEC;_ENABLE_ATOMIC_ALIGNMENT_FIX;MY_REDIS_BUILDING_SHARED;NO_REDISSERVICE_DEBUG_CMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
@@ -156,13 +223,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../src;../src/capnp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src;../src/capnp;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;HAVE_STRUCT_TIMESPEC;_ENABLE_ATOMIC_ALIGNMENT_FIX;MY_REDIS_BUILDING_SHARED;NO_REDISSERVICE_DEBUG_CMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Program Files (x86)\Visual Leak Detector\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
       <ShowProgress>NotSet</ShowProgress>

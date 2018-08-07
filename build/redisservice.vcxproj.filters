@@ -4,9 +4,6 @@
     <Filter Include="src">
       <UniqueIdentifier>{3248768a-1364-4818-a15b-2c50cca8b574}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\builders">
-      <UniqueIdentifier>{ee678c83-b8e5-42ec-b2e7-2afcab11c1e5}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\base">
       <UniqueIdentifier>{68d5da3d-9338-40b7-96cc-fac65b103756}</UniqueIdentifier>
     </Filter>
@@ -22,34 +19,16 @@
     <Filter Include="src\capnp\kj">
       <UniqueIdentifier>{78a7549a-bdc4-4fb6-8877-c87edd26df9b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\base\reply_parser">
+      <UniqueIdentifier>{3436d168-6558-42cb-a040-d5c6e1a49d19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\base\rdb_parser">
+      <UniqueIdentifier>{742b4450-3111-4d96-b50f-9e4814333bfb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\RedisService.h">
       <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\builders\integer_builder.hpp">
-      <Filter>src\builders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\builders\simple_string_builder.hpp">
-      <Filter>src\builders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\builders\array_builder.hpp">
-      <Filter>src\builders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\builders\builder_iface.hpp">
-      <Filter>src\builders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\builders\builders_factory.hpp">
-      <Filter>src\builders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\builders\bulk_string_builder.hpp">
-      <Filter>src\builders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\builders\error_builder.hpp">
-      <Filter>src\builders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\builders\sub_array_builder.hpp">
-      <Filter>src\builders</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io\KjReplyBuilder.hpp">
       <Filter>src\io</Filter>
@@ -58,9 +37,6 @@
       <Filter>src\base</Filter>
     </ClInclude>
     <ClInclude Include="..\src\base\bip_buf.h">
-      <Filter>src\base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\base\CamelWorkQueue.h">
       <Filter>src\base</Filter>
     </ClInclude>
     <ClInclude Include="..\src\base\concurrent\readerwriterqueue.h">
@@ -123,31 +99,142 @@
     <ClInclude Include="..\src\base\platform_types.h">
       <Filter>src\base</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\base\CamelReaderWriterQueue.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\nx_array.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\nx_buf.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\mysnprintf.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\fast_memcpy.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\r_build_factory.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\r_build_integer.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\r_build_simple_string.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\reply_builder.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\reply_parser.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\reply_parser_def.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\r_build_array.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\r_build_bulk_string.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\r_build_reply.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\reply_parser\reply_build_helper.h">
+      <Filter>src\base\reply_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_list_or_set_value.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_lzf_string_value.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_string_value.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_zipmap_value.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_zl_hash_value.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_zl_list_value.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\intset.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\lzf.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\lzfP.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\rdb_parser.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\rdb_parser_def.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\ziplist.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\zipmap.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_body.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_factory.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_footer.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_hash_or_zset_value.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_header.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_helper.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_intset_value.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\crc64.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\endian.h">
+      <Filter>src\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\rdb.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_opcode_aux.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\rdb_object_builder.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_object_detail_kv.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_object_detail_kv_val.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\rdb_parser\build_dumped_data.h">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\RedisCommandBuilder.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\RedisService.cpp">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\builders\integer_builder.cpp">
-      <Filter>src\builders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\builders\simple_string_builder.cpp">
-      <Filter>src\builders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\builders\array_builder.cpp">
-      <Filter>src\builders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\builders\builders_factory.cpp">
-      <Filter>src\builders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\builders\bulk_string_builder.cpp">
-      <Filter>src\builders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\builders\error_builder.cpp">
-      <Filter>src\builders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\builders\sub_array_builder.cpp">
-      <Filter>src\builders</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io\KjSimpleIoContext.cpp">
       <Filter>src\io</Filter>
@@ -224,9 +311,6 @@
     <ClCompile Include="..\src\base\bip_buf.c">
       <Filter>src\base</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\base\CamelWorkQueue.cpp">
-      <Filter>src\base</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\RedisServicePlugin.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -264,6 +348,126 @@
       <Filter>src\base</Filter>
     </ClCompile>
     <ClCompile Include="..\src\UsingRedisService.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\CamelReaderWriterQueue.cpp">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\nx_array.c">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\nx_buf.c">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\mysnprintf.c">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\fast_memcpy.c">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\r_build_factory.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\r_build_integer.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\r_build_simple_string.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\reply_builder.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\reply_parser.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\r_build_array.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\r_build_bulk_string.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\r_build_reply.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\reply_parser\reply_build_helper.c">
+      <Filter>src\base\reply_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_lzf_string_value.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_string_value.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_zipmap_value.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_zl_hash_value.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_zl_list_value.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\intset.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\lzf_d.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\rdb_parser.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\ziplist.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\zipmap.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_body.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_factory.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_footer.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_hash_or_zset_value.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_header.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_helper.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_intset_value.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_list_or_set_value.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\endian.c">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\crc64.c">
+      <Filter>src\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_opcode_aux.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\rdb_object_builder.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_object_detail_kv.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_object_detail_kv_val.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\rdb_parser\build_dumped_data.c">
+      <Filter>src\base\rdb_parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RedisCommandBuilder.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

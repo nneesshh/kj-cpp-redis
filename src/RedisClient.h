@@ -10,6 +10,8 @@
 #include "io/RedisTrunkQueue.h"
 #include "io/KjRedisClientWorkQueue.hpp"
 
+#include "RedisCommandBuilder.h"
+
 //------------------------------------------------------------------------------
 /**
 @brief CRedisClient
@@ -24,139 +26,146 @@ public:
 		_trunkQueue->RunOnce();
 	}
 	
-	virtual void				Send(const std::vector<std::string>& vPiece) override;
-	virtual void				Commit(redis_reply_cb_t&& reply_cb) override;
+	virtual void				Commit(redis_reply_cb_t&& rcb) override;
 	virtual CRedisReply			BlockingCommit() override;
 
 	virtual void				Watch(const std::string& key) override {
-		Send({ "WATCH", key });
+		BuildCommand({ "WATCH", key });
 	}
 
 	virtual void				Multi() override {
-		Send({ "MULTI" });
+		BuildCommand({ "MULTI" });
 	}
 
 	virtual void				Exec() override {
-		Send({ "EXEC" });
+		BuildCommand({ "EXEC" });
+	}
+
+	virtual void				Dump(const std::string& key) override {
+		BuildCommand({ "DUMP", key });
+	}
+
+	virtual void				Restore(const std::string& key, std::string& val) override {
+		BuildCommand({ "RESTORE", key, std::move(val) });
 	}
 
 	virtual void				Set(const std::string& key, std::string& val) override {
-		Send({ "SET", key, std::move(val) });
+		BuildCommand({ "SET", key, std::move(val) });
 	}
 
 	virtual void				Get(const std::string& key) override {
-		Send({ "GET", key });
+		BuildCommand({ "GET", key });
 	}
 
 	virtual void				GetSet(const std::string& key, std::string& val) override {
-		Send({ "GETSET", key, std::move(val) });
+		BuildCommand({ "GETSET", key, std::move(val) });
 	}
 
 	virtual void				Del(std::vector<std::string>& vKey) override {
 		std::vector<std::string> vPiece(1 + vKey.size());
 		vPiece.assign({ std::string("DEL") });
 		vPiece.insert(vPiece.end(), vKey.begin(), vKey.end());
-		Send(vPiece);
+		BuildCommand(vPiece);
 	}
 
 	virtual void				LPush(const std::string& key, std::vector<std::string>& vVal) override {
 		std::vector<std::string> vPiece(2 + vVal.size());
 		vPiece.assign({ std::string("LPUSH"), key });
 		vPiece.insert(vPiece.end(), vVal.begin(), vVal.end());
-		Send(vPiece);
+		BuildCommand(vPiece);
 	}
 
 	virtual void				RPush(const std::string& key, std::vector<std::string>& vVal) override {
 		std::vector<std::string> vPiece(2 + vVal.size());
 		vPiece.assign({ "RPUSH", key });
 		vPiece.insert(vPiece.end(), vVal.begin(), vVal.end());
-		Send(vPiece);
+		BuildCommand(vPiece);
 	}
 
 	virtual void				LPop(const std::string& key) override {
-		Send({ "LPOP", key });
+		BuildCommand({ "LPOP", key });
 	}
 
 	virtual void				RPop(const std::string& key) override {
-		Send({ "RPOP", key });
+		BuildCommand({ "RPOP", key });
 	}
 
 	virtual void				LLen(const std::string& key) override {
-		Send({ "LLEN", key });
+		BuildCommand({ "LLEN", key });
 	}
 
 	virtual void				LIndex(const std::string& key, int nIndex) override {
-		Send({ "LINDEX", key, std::to_string(nIndex) });
+		BuildCommand({ "LINDEX", key, std::to_string(nIndex) });
 	}
 
 	virtual void				LRange(const std::string& key, int nStart, int nStop) override {
-		Send({ "LRANGE", key, std::to_string(nStart), std::to_string(nStop) });
+		BuildCommand({ "LRANGE", key, std::to_string(nStart), std::to_string(nStop) });
 	}
 
 	virtual void				LTrim(const std::string& key, int nStart, int nStop) override {
-		Send({ "LTRIM", key, std::to_string(nStart), std::to_string(nStop) });
+		BuildCommand({ "LTRIM", key, std::to_string(nStart), std::to_string(nStop) });
 	}
 
 	virtual void				HDel(const std::string& key, std::vector<std::string>& vField) override {
 		std::vector<std::string> vPiece(2 + vField.size());
 		vPiece.assign({ "HDEL", key });
 		vPiece.insert(vPiece.end(), vField.begin(), vField.end());
-		Send(vPiece);
+		BuildCommand(vPiece);
 	}
 
 	virtual void				HGetAll(const std::string& key) override {
-		Send({ "HGETALL", key });
+		BuildCommand({ "HGETALL", key });
 	}
 
 	virtual void				HGet(const std::string& key, const std::string& field) override {
-		Send({ "HGET", key, field });
+		BuildCommand({ "HGET", key, field });
 	}
 
 	virtual void				HSet(const std::string& key, const std::string& field, std::string& val) override {
-		Send({ "HSET", key, field, std::move(val) });
+		BuildCommand({ "HSET", key, field, std::move(val) });
 	}
 
 	virtual void				ZAdd(const std::string& key, std::string& score, std::string& member) override {
-		Send({ "ZADD", key, score, member });
+		BuildCommand({ "ZADD", key, score, member });
 	}
 
 	virtual void				ZRem(const std::string& key, std::vector<std::string>& vMember) override {
 		std::vector<std::string> vPiece(2 + vMember.size());
 		vPiece.assign({ "ZREM", key });
 		vPiece.insert(vPiece.end(), vMember.begin(), vMember.end());
-		Send(vPiece);
+		BuildCommand(vPiece);
 	}
 
 	virtual void				ZScore(const std::string& key, std::string& member) override {
-		Send({ "ZSCORE", key, member });
+		BuildCommand({ "ZSCORE", key, member });
 	}
 
 	virtual void				ZRange(const std::string& key, std::string& start, std::string& stop, bool bWithScores = false) override {
 		if (bWithScores) {
-			Send({ "ZRANGE", key, start, stop, "WITHSCORES" });
+			BuildCommand({ "ZRANGE", key, start, stop, "WITHSCORES" });
 		}
 		else {
-			Send({ "ZRANGE", key, start, stop });
+			BuildCommand({ "ZRANGE", key, start, stop });
 		}
 	}
 
 	virtual void				ZRank(const std::string& key, std::string& member) override {
-		Send({ "ZRANK", key, member });
+		BuildCommand({ "ZRANK", key, member });
 	}
 
 	virtual void				SAdd(const std::string& key, std::vector<std::string>& vMember) override {
 		std::vector<std::string> vPiece(2 + vMember.size());
 		vPiece.assign({ "SADD", key });
 		vPiece.insert(vPiece.end(), vMember.begin(), vMember.end());
-		Send(vPiece);
+		BuildCommand(vPiece);
 	}
 
 	virtual void				SMembers(const std::string& key) override {
-		Send({ "SMEMBERS", key });
+		BuildCommand({ "SMEMBERS", key });
 	}
 
 	virtual void				ScriptLoad(const std::string& script) override {
-		Send({ "SCRIPT", "LOAD", script });
+		BuildCommand({ "SCRIPT", "LOAD", script });
 	}
 
 	virtual void				Eval(const std::string& script, std::vector<std::string>& vKey, std::vector<std::string>& vArg) override {
@@ -166,7 +175,7 @@ public:
 		vPiece.assign({ "EVAL", script, std::to_string(szNumKeys) });
 		vPiece.insert(vPiece.end(), vKey.begin(), vKey.end());
 		vPiece.insert(vPiece.end(), vArg.begin(), vArg.end());
-		Send(vPiece);
+		BuildCommand(vPiece);
 	}
 
 	virtual void				EvalSha(const std::string& sha, std::vector<std::string>& vKey, std::vector<std::string>& vArg) override {
@@ -176,12 +185,20 @@ public:
 		vPiece.assign({ "EVALSHA", sha, std::to_string(szNumKeys) });
 		vPiece.insert(vPiece.end(), vKey.begin(), vKey.end());
 		vPiece.insert(vPiece.end(), vArg.begin(), vArg.end());
-		Send(vPiece);
+		BuildCommand(vPiece);
 	}
 
 	virtual void				Shutdown() override;
 
 private:
+	void						BuildCommand(const std::vector<std::string>& vPiece) {
+		CRedisCommandBuilder::Build(vPiece, _singleCommand, _allCommands, _builtNum);
+		_singleCommand.resize(0);
+	}
+
+private:
+	redis_stub_param_t& _refParam;
+
 	CRedisTrunkQueuePtr _trunkQueue;
 	CKjRedisClientWorkQueuePtr _workQueue;
 

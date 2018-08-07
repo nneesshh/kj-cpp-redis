@@ -19,6 +19,8 @@
 #include "base/RedisError.h"
 #include "RedisService.h"
 
+#include "RedisCommandBuilder.h"
+
 static void 
 write_redis_connection_crash_error(const char *err_txt) {
 	char log_file_name[256];
@@ -68,6 +70,8 @@ write_redis_connection_crash_error(const char *err_txt) {
 	fclose(ferr);
 }
 
+static uint64_t s_redis_client_connid = 91110000;
+
 //------------------------------------------------------------------------------
 /**
 
@@ -76,7 +80,7 @@ KjRedisClientConn::KjRedisClientConn(kj::Own<KjSimpleThreadIoContext> tioContext
 	: _tioContext(kj::mv(tioContext))
 	, _tasks(_tioContext->CreateTaskSet(*this))
 	, _refParam(param)
-	, _kjconn(kj::addRef(*_tioContext), (uintptr_t)(this)) {
+	, _kjconn(kj::addRef(*_tioContext), ++s_redis_client_connid) {
 	//
 	Init();
 }
@@ -105,12 +109,12 @@ KjRedisClientConn::OnClientConnect(KjTcpConnection&, uint64_t connid) {
 
 	// connection init
 	{
-		std::deque<CKjRedisClientWorkQueue::cmd_pipepline_t> dqTmp;
+		std::deque<redis_cmd_pipepline_t> dqTmp;
 		dqTmp.insert(dqTmp.end(), _dqInit.begin(), _dqInit.end());
 
 		for (auto& cp : _dqCommon) {
 			if (cp._sn > 0
-				&& cp._state < CKjRedisClientWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_PROCESS_OVER) {
+				&& cp._state < redis_cmd_pipepline_t::PROCESS_OVER) {
 				// it is common cmd pipeline and not process over yest
 				dqTmp.emplace_back(std::move(cp));
 			}
@@ -119,7 +123,7 @@ KjRedisClientConn::OnClientConnect(KjTcpConnection&, uint64_t connid) {
 
 		for (auto& cp : _dqCommon) {
 			// resending
-			cp._state = CKjRedisClientWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING;
+			cp._state = redis_cmd_pipepline_t::SENDING;
 		}
 
 		// recommit
@@ -141,10 +145,10 @@ KjRedisClientConn::OnClientDisconnect(KjTcpConnection&, uint64_t connid) {
 
 */
 void
-KjRedisClientConn::OnClientReceive(KjTcpConnection&, bip_buf_t& bbuf) {
+KjRedisClientConn::OnClientReceive(KjTcpConnection&, bip_buf_t& bb) {
 
 	try {
-		_builder.ProcessInput(bbuf);
+		_builder.ProcessInput(bb);
 	}
 	catch (const CRedisError&) {
 		return;
@@ -152,7 +156,7 @@ KjRedisClientConn::OnClientReceive(KjTcpConnection&, bip_buf_t& bbuf) {
 
 	while (_builder.IsReplyAvailable()) {
 
-		auto& reply = _builder.GetFront();
+		CRedisReply reply = _builder.PopReply();
 		if (reply.is_error()) {
 
 			std::string sDesc = "[KjRedisClientConn::OnClientReceive()] !!! reply error !!! ";
@@ -173,7 +177,7 @@ KjRedisClientConn::OnClientReceive(KjTcpConnection&, bip_buf_t& bbuf) {
 		}
 
 		// check cmd pipeline state
-		if (cp._state < CKjRedisClientWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_COMMITTING) {
+		if (cp._state < redis_cmd_pipepline_t::COMMITTING) {
 
 			std::string sDesc = "[KjRedisClientConn::OnClientReceive()] !!! got reply but the cmd pipeline is in a corrupted state !!! ";
 			fprintf(stderr, "\n\n\n%s\n", sDesc.c_str());
@@ -182,7 +186,7 @@ KjRedisClientConn::OnClientReceive(KjTcpConnection&, bip_buf_t& bbuf) {
 
 		// go on processing -- non-tail reply is skipped, just add process num
 		++cp._processed_num;
-		cp._state = CKjRedisClientWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_PROCESSING;
+		cp._state = redis_cmd_pipepline_t::PROCESSING;
 
 		// process over -- it is tail reply(the last reply of the cmd pipeline), run callback on it
 		if (cp._processed_num >= cp._built_num) {
@@ -190,15 +194,12 @@ KjRedisClientConn::OnClientReceive(KjTcpConnection&, bip_buf_t& bbuf) {
 			if (cp._reply_cb) cp._reply_cb(std::move(reply));
 			if (cp._dispose_cb) cp._dispose_cb();
 
-			cp._state = CKjRedisClientWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_PROCESS_OVER;
+			cp._state = redis_cmd_pipepline_t::PROCESS_OVER;
 
 			//
 			_dqCommon.pop_front();
 			--_committing_num;
 		}
-
-		//
-		_builder.PopFront();
 	}
 }
 
@@ -275,7 +276,7 @@ KjRedisClientConn::Commit() {
 void
 KjRedisClientConn::Init() {
 	//
-	std::string sAllCommands;
+	std::string sCommands;
 	int nBuiltNum = 0;
 
 	// auth
@@ -283,25 +284,25 @@ KjRedisClientConn::Init() {
 	if (sPassword.length() > 0) {
 
 		std::string sSingleCommand;
-		CRedisService::Send({ "AUTH", sPassword }, sSingleCommand, sAllCommands, nBuiltNum);
+		CRedisCommandBuilder::Build({ "AUTH", sPassword }, sSingleCommand, sCommands, nBuiltNum);
 
 		//
 		auto cp = CKjRedisClientWorkQueue::CreateCmdPipeline(
 			0,
-			sAllCommands,
+			sCommands,
 			nBuiltNum,
 			nullptr,
 			nullptr);
 
 		//
 		_dqInit.emplace_back(std::move(cp));
-		sAllCommands.resize(0);
+		sCommands.resize(0);
 		nBuiltNum = 0;
 	}
 
 	// test cmsgpack
-	std::string sTestcmsgpack("52402e4e18985df16d69f6849ed4adb27f39955b");
-	_refParam._mapScript[sTestcmsgpack] = "local t={1,'abc2',3};local p=cmsgpack.pack(t);local u=cmsgpack.unpack(p);return {t, p, u}";
+	std::string sTestcmsgpack("577017df0566f25df93daa49115c0290597c3c36");
+	_refParam._mapScript[sTestcmsgpack] = "local t={1,'abc2',3};local p=cmsgpack.pack(t);local u=cmsgpack.unpack(p);return {t,p,u}";
 
 	// register script
 	for (auto& iter : _refParam._mapScript) {
@@ -311,16 +312,17 @@ KjRedisClientConn::Init() {
 
 		// script load
 		std::string sSingleCommand;
-		CRedisService::Send({ "SCRIPT", "LOAD", sScript }, sSingleCommand, sAllCommands, nBuiltNum);
+		CRedisCommandBuilder::Build({ "SCRIPT", "LOAD", sScript }, sSingleCommand, sCommands, nBuiltNum);
 
 		//
-		redis_reply_cb_t func = [sSha, sScript](CRedisReply& reply) {
+		redis_reply_cb_t func = [sSha, sScript](CRedisReply&& reply) {
+			CRedisReply r = std::move(reply);
 			bool bRegisterSuccess = false;
-			std::string sExcept;
-			if (reply.ok()
-				&& reply.is_string()) {
-				sExcept = reply.as_string();
-				if (sSha == sExcept) {
+			std::string sExpected;
+			if (r.ok()
+				&& r.is_string()) {
+				sExpected = r.as_string();
+				if (sSha == sExpected) {
 					bRegisterSuccess = true;
 				}
 			}
@@ -328,7 +330,7 @@ KjRedisClientConn::Init() {
 			if (!bRegisterSuccess) {
 
 				std::string sDesc = "[KjRedisClientConn::Init()] !!! register script error !!! ";
-				sDesc += "\nscript=\"" + sScript + "\"\nsha='" + sSha + "\"\nexcept=\"" + sExcept + "\"\n";
+				sDesc += "\nscript=\"" + sScript + "\"\nsha='" + sSha + "\"\nexpected=\"" + sExpected + "\"\n";
 				fprintf(stderr, "\n\n\n%s\n", sDesc.c_str());
 				throw CRedisError(sDesc.c_str());
 			}
@@ -336,14 +338,14 @@ KjRedisClientConn::Init() {
 
 		auto cp = CKjRedisClientWorkQueue::CreateCmdPipeline(
 			0,
-			sAllCommands,
+			sCommands,
 			nBuiltNum,
 			std::move(func),
 			nullptr);
 
 		//
 		_dqInit.emplace_back(std::move(cp));
-		sAllCommands.resize(0);
+		sCommands.resize(0);
 		nBuiltNum = 0;
 	}
 }
@@ -383,11 +385,11 @@ KjRedisClientConn::CommitLoop() {
 
 	if (IsConnected()) {
 		for (auto& cp : _dqCommon) {
-			if (CKjRedisClientWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_SENDING == cp._state) {
+			if (redis_cmd_pipepline_t::SENDING == cp._state) {
 
 				_kjconn.Write(cp._commands.c_str(), cp._commands.length());
 				
-				cp._state = CKjRedisClientWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_COMMITTING;
+				cp._state = redis_cmd_pipepline_t::COMMITTING;
 				++_committing_num;
 			}
 		}
@@ -422,20 +424,26 @@ KjRedisClientConn::taskFailed(kj::Exception&& exception) {
 	fprintf(stderr, chDesc);
 	write_redis_connection_crash_error(chDesc);
 
-	// force flush stream
-	_kjconn.FlushStream();
+	// eval later to avoid destroying self task set
+	auto p1 = _tioContext->EvalForResult(
+		[this]() {
 
-	//
-	_builder.Reset();
+		// force flush stream
+		_kjconn.FlushStream();
 
-	// 
-	for (auto& cp : _dqCommon) {
-		cp._state = CKjRedisClientWorkQueue::cmd_pipepline_t::CMD_PIPELINE_STATE_QUEUEING;
-	}
-	_committing_num = 0;
+		//
+		_builder.Reset();
 
-	//
-	DelayReconnect();
+		// 
+		for (auto& cp : _dqCommon) {
+			cp._state = redis_cmd_pipepline_t::QUEUEING;
+		}
+		_committing_num = 0;
+
+		//
+		DelayReconnect();
+	});
+	_tioContext->AddTask(kj::mv(p1), "redis client conn dispose");
 }
 
 /** -- EOF -- **/

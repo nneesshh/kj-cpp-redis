@@ -1,1 +1,1 @@
-xcopy /sy .\src\*.h* .\include\
+xcopy /sy .\src\*.h* .\include\redisservice\

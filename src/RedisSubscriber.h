@@ -10,6 +10,8 @@
 #include "io/RedisTrunkQueue.h"
 #include "io/KjRedisSubscriberWorkQueue.hpp"
 
+#include "RedisCommandBuilder.h"
+
 //------------------------------------------------------------------------------
 /**
 @brief CRedisSubscriber
@@ -51,7 +53,10 @@ public:
 	virtual void				Shutdown() override;
 
 private:
-	void						Send(const std::vector<std::string>& vPiece);
+	void						BuildCommand(const std::vector<std::string>& vPiece) {
+		CRedisCommandBuilder::Build(vPiece, _singleCommand, _allCommands, _builtNum);
+		_singleCommand.resize(0);
+	}
 
 	void						CommitChannel(const std::string& channel);
 	void						CommitPattern(const std::string& pattern);

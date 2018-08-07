@@ -78,7 +78,7 @@ CKjRedisClientWorkQueue::~CKjRedisClientWorkQueue() {
 
 */
 bool
-CKjRedisClientWorkQueue::Add(cmd_pipepline_t&& cmd) {
+CKjRedisClientWorkQueue::Add(redis_cmd_pipepline_t&& cmd) {
 
 	if (_done) {
 		// error

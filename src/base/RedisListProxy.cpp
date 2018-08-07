@@ -7,8 +7,8 @@
 #include "redis_service_def.h"
 #include "IRedisService.h"
 
-int
-static split(const char *str, int str_len, char **av, int av_max, char c) {
+static int
+__split(const char *str, int str_len, char **av, int av_max, char c) {
 	int i, j;
 	char *ptr = (char*)str;
 	int count = 0;
@@ -33,19 +33,20 @@ static split(const char *str, int str_len, char **av, int av_max, char c) {
 static std::string s_sClear = "deb71530a8a2f6470a74c33cc9b3b3bba6fcc69e";
 static std::string s_sPopAll = "b0b18b5d128a0d932e1d4e5543f11880cf0dfa8b";
 static std::string s_sPopAllAndMark = "c9624702dd41daced1a4787ebaf4489dd5592874";
-static std::string s_sLPushCAS = "967f59a855ba3b3a8b9ac5d9f8daa8457fbba45e";
-static std::string s_sRPushCAS = "52e3cc9c03e402eb148548b1602bb82afe716424";
+
+static std::string s_sLPushCAS = "764bc6b58b5272c9eda438a44f0abdb7454fc3c0";
+static std::string s_sRPushCAS = "044d7ba0a5150296285b62efa0c228236636fa3a";
 
 static std::string s_sTestMark = "9ca07b622605324eb92e9f01f5860a87fe56214d";
-static std::string s_sSetCAS = "2eb401039d2bec89ac6e7311d60194384947b76a";
-static std::string s_sResetCAS = "cd7ef4d8a95e631264688babc820a4e5a53b6ff1";
+static std::string s_sSetCAS = "2fdf109a78a49c51c5c1c4b035927e4fcc394a9c";
+static std::string s_sResetCAS = "1e350b4d1cf38e36c5082ff36a95ce5dea6679eb";
 
-static std::string s_sIncrByIntCAS = "65d1f192c9e154865d50efba3a76dadceef93471";
-static std::string s_sDecrByIntCAS = "efeaae5ef3b4a0d685383aff52aabee8d8571bc5";
+static std::string s_sIncrByIntCAS = "92fc29a7c55e636d9927ada459d608eb680a364f";
+static std::string s_sDecrByIntCAS = "eda85bcc07e3fe85cfcdcdcdb875db5ca9ca891b";
 
-static std::string s_sLootDirtyEntry = "fa3efcd6855add68127fae7f8cbf82f2d1c4619a";
+static std::string s_sLootDirtyEntry = "8e8d837cb25f8f1d61ffd3880d4ac1cea7527e90";
 
-static std::string s_sRestore = "cba63a3da38295811b8160e3f1a397d21646fe38";
+static std::string s_sRestore = "b15789dc8b29ea2d6c41dafbccee95e877046701";
 
 //////////////////////////////////////////////////////////////////////////
 static std::map<std::string, std::string> s_mapScript = {
@@ -53,19 +54,19 @@ static std::map<std::string, std::string> s_mapScript = {
 	{ s_sPopAll,			"local r=redis.call('LRANGE',KEYS[2],0,-1);redis.call('DEL',KEYS[2]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);return r" },
 	{ s_sPopAllAndMark,		"local r=redis.call('LRANGE',KEYS[2],0,-1);redis.call('DEL',KEYS[2]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);redis.call('HSET',KEYS[1],ARGV[1],ARGV[2]);redis.call('PUBLISH',KEYS[4],'0|'..ARGV[1]..':'..ARGV[2]);return r" },
 
-	{ s_sLPushCAS,			"local r=redis.call('HGET',KEYS[1],ARGV[1]);if (type(r)=='boolean' and not r or nil==r or ''==r)or(r==ARGV[2]) then redis.call('HSET',KEYS[1],ARGV[1],ARGV[3]);redis.call('LPUSH',KEYS[2],ARGV[4]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);local m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m..'|'..ARGV[1]..':'..ARGV[3]);return true;else return false;end" },
-	{ s_sRPushCAS,			"local r=redis.call('HGET',KEYS[1],ARGV[1]);if (type(r)=='boolean' and not r or nil==r or ''==r)or(r==ARGV[2]) then redis.call('HSET',KEYS[1],ARGV[1],ARGV[3]);redis.call('RPUSH',KEYS[2],ARGV[4]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);local m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return true;else return false;end" },
+	{ s_sLPushCAS,			"local r,m;r=redis.call('HGET',KEYS[1],ARGV[1]);if (type(r)=='boolean' and not r or nil==r or ''==r)or(r==ARGV[2]) then redis.call('HSET',KEYS[1],ARGV[1],ARGV[3]);redis.call('LPUSH',KEYS[2],ARGV[4]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m..'|'..ARGV[1]..':'..ARGV[3]);return true;else return false;end" },
+	{ s_sRPushCAS,			"local r,m;r=redis.call('HGET',KEYS[1],ARGV[1]);if (type(r)=='boolean' and not r or nil==r or ''==r)or(r==ARGV[2]) then redis.call('HSET',KEYS[1],ARGV[1],ARGV[3]);redis.call('RPUSH',KEYS[2],ARGV[4]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return true;else return false;end" },
 
 	{ s_sTestMark,			"local r=redis.call('HGET',KEYS[1],ARGV[1]);return r==ARGV[2]" },
-	{ s_sSetCAS,			"local r=redis.call('HGET',KEYS[1],ARGV[1]);if (type(r)=='boolean' and not r or nil==r or ''==r)or(r==ARGV[2]) then redis.call('HSET',KEYS[1],ARGV[1],ARGV[3]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);local m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return true;else return false;end" },
-	{ s_sResetCAS,			"local r=redis.call('HGET',KEYS[1],ARGV[1]);if r~=ARGV[2] then redis.call('HSET',KEYS[1],ARGV[1],ARGV[3]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);local m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return true;else return false;end" },
+	{ s_sSetCAS,			"local r,m;r=redis.call('HGET',KEYS[1],ARGV[1]);if (type(r)=='boolean' and not r or nil==r or ''==r)or(r==ARGV[2]) then redis.call('HSET',KEYS[1],ARGV[1],ARGV[3]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return true;else return false;end" },
+	{ s_sResetCAS,			"local r,m;r=redis.call('HGET',KEYS[1],ARGV[1]);if r~=ARGV[2] then redis.call('HSET',KEYS[1],ARGV[1],ARGV[3]);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return true;else return false;end" },
 
-	{ s_sIncrByIntCAS,		"local r=redis.call('HGET',KEYS[1],ARGV[1]);r=(type(r)=='boolean' and not r or nil==r or ''==r)and(tonumber(ARGV[2]))or(tonumber(r)+tonumber(ARGV[2]));if r<=tonumber(ARGV[3]) then redis.call('HSET',KEYS[1],ARGV[1],r);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);local m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return r;else return false;end" },
-	{ s_sDecrByIntCAS,		"local r=redis.call('HGET',KEYS[1],ARGV[1]);r=(type(r)=='boolean' and not r or nil==r or ''==r)and(tonumber(ARGV[2]))or(tonumber(r)-tonumber(ARGV[2]));if r>=tonumber(ARGV[3]) then redis.call('HSET',KEYS[1],ARGV[1],r);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);local m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return r;else return false;end" },
+	{ s_sIncrByIntCAS,		"local r,m;r=redis.call('HGET',KEYS[1],ARGV[1]);r=(type(r)=='boolean' and not r or nil==r or ''==r)and(tonumber(ARGV[2]))or(tonumber(r)+tonumber(ARGV[2]));if r<=tonumber(ARGV[3]) then redis.call('HSET',KEYS[1],ARGV[1],r);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return r;else return false;end" },
+	{ s_sDecrByIntCAS,		"local r,m;r=redis.call('HGET',KEYS[1],ARGV[1]);r=(type(r)=='boolean' and not r or nil==r or ''==r)and(tonumber(ARGV[2]))or(tonumber(r)-tonumber(ARGV[2]));if r>=tonumber(ARGV[3]) then redis.call('HSET',KEYS[1],ARGV[1],r);redis.call('HSET',KEYS[1],'is_dirty',1);redis.call('HSET',KEYS[3],KEYS[2],KEYS[1]);m=redis.call('LLEN',KEYS[2]);redis.call('PUBLISH',KEYS[4],m);return r;else return false;end" },
 
-	{ s_sLootDirtyEntry,	"local a=redis.call('HGETALL',KEYS[1]);redis.call('DEL',KEYS[1]);local r={};local n=(a and #a) or 0;for i=1,n-1,2 do local l=a[i];local c=a[i+1];local d=redis.call('HGET',c,'is_dirty');redis.call('HDEL',c,'is_dirty');if 1==tonumber(d) then local t={};table.insert(t,l);table.insert(t,cmsgpack.pack(redis.call('LRANGE',l,0,-1)));table.insert(t,c);table.insert(t,cmsgpack.pack(redis.call('HGETALL',c)));table.insert(r,t);end;end;return r" },
+	{ s_sLootDirtyEntry,	"local r,e,n,i,l,c,d,t;r={};e=redis.call('HGETALL',KEYS[1]);redis.call('DEL',KEYS[1]);n=(e and #e) or 0;for i=1,n-1,2 do l=e[i];c=e[i+1];d=redis.call('HGET',c,'is_dirty');redis.call('HDEL',c,'is_dirty');if 1==tonumber(d) then t={};table.insert(t,l);table.insert(t,redis.call('DUMP',l));table.insert(t,c);table.insert(t,redis.call('DUMP',c));table.insert(r,t);end;end;return r" },
 
-	{ s_sRestore,			"local c=0;local l=0;redis.call('DEL',KEYS[1]);redis.call('DEL',KEYS[2]);local t=(ARGV[1] or '');local u=cmsgpack.unpack(t);local n=(u and #u) or 0;for i=1,n-1,2 do redis.call('HSET',KEYS[1],u[i],u[i+1]);c=c+1;end;t=(ARGV[2] or '');u=cmsgpack.unpack(t) or {};for _,v in ipairs(u) do redis.call('RPUSH',KEYS[2],v);l=l+1;end;return {c,l}" },
+	{ s_sRestore,			"local c,l;c=ARGV[1];l=ARGV[2];redis.call('DEL',KEYS[1]);redis.call('DEL',KEYS[2]);if type(c)=='string' and string.len(c)>0 then redis.call('RESTORE',KEYS[1],0,c);end;if type(l)=='string' and string.len(l)>0 then redis.call('RESTORE',KEYS[2],0,l);end" },
 };
 
 //------------------------------------------------------------------------------
@@ -128,8 +129,7 @@ void
 CRedisListProxy::Commit() {
 	redis_service_entry_t *entry = static_cast<redis_service_entry_t *>(_refEntry);
 	IRedisService *redisservice = static_cast<IRedisService *>(entry->_redisservice);
-	redis_reply_cb_t defaultCb = [](CRedisReply&) {};
-	redisservice->Client().Commit(std::move(defaultCb));
+	redisservice->Client().Commit(nullptr);
 }
 
 //------------------------------------------------------------------------------
@@ -482,7 +482,7 @@ void
 CRedisListProxy::SplitIdList(const std::string& sIdList, std::string& sOutModuleName, std::string& sOutMainId, std::string& sOutSubid) {
 	std::string sTmp = sIdList;
 	char* chArr[8] = { 0 };
-	int n = split(sTmp.c_str(), sTmp.length(), chArr, 8, ':');
+	int n = __split(sTmp.c_str(), sTmp.length(), chArr, 8, ':');
 	if (n >= 3) {
 		sOutModuleName = chArr[0];
 		sOutMainId = chArr[1];

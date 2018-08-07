@@ -67,7 +67,7 @@ CRedisReply::set() {
 }
 
 void
-CRedisReply::set(const std::string& value, string_type reply_type) {
+CRedisReply::set(std::string&& value, string_type reply_type) {
 	_type = static_cast<type>(reply_type);
 	_strval = std::move(value);
 }
@@ -79,17 +79,9 @@ CRedisReply::set(int64_t value) {
 }
 
 void
-CRedisReply::set(std::vector<CRedisReply>& rows) {
+CRedisReply::set(std::vector<CRedisReply>&& rows) {
 	_type = type::array;
 	_rows = std::move(rows);
-}
-
-CRedisReply&
-CRedisReply::operator<<(CRedisReply&& reply) {
-	_type = type::array;
-	_rows.emplace_back(std::move(reply));
-
-	return *this;
 }
 
 bool
@@ -140,6 +132,15 @@ CRedisReply::as_string() {
 	if (!is_string())
 		throw CRedisError("Reply is not a string");
 
+	return _strval;
+}
+
+const std::string&
+CRedisReply::as_safe_string() {
+	if (!is_string()) {
+		static std::string sEmpty;
+		return sEmpty;
+	}
 	return _strval;
 }
 

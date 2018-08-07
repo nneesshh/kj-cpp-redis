@@ -13,6 +13,14 @@
 #include "platform_types.h"
 #include "RedisReply.h"
 
+#ifdef __cplusplus 
+extern "C" {
+#endif 
+#include "rdb_parser/rdb_parser.h"
+#ifdef __cplusplus 
+}
+#endif 
+
 class IRedisClient;
 class IRedisSubscriber;
 
@@ -29,6 +37,8 @@ public:
 	virtual IRedisClient&		Client() = 0;
 	virtual IRedisSubscriber&	Subscriber() = 0;
 
+	virtual int					ParseDumpedData(const std::string& sDump, std::function<int(rdb_object_t *)>&& cb) = 0;
+
 	virtual void				Shutdown() = 0;
 };
 
@@ -38,13 +48,15 @@ public:
 
 	virtual void				RunOnce() = 0;
 
-	virtual void				Send(const std::vector<std::string>& vInputPiece) = 0;
-	virtual void				Commit(redis_reply_cb_t&& reply_cb) = 0;
+	virtual void				Commit(redis_reply_cb_t&& rcb) = 0;
 	virtual CRedisReply			BlockingCommit() = 0;
 
 	virtual void				Watch(const std::string& key) = 0;
 	virtual void				Multi() = 0;
 	virtual void				Exec() = 0;
+
+	virtual void				Dump(const std::string& key) = 0;
+	virtual void				Restore(const std::string& key, std::string& val) = 0;
 
 	virtual void				Set(const std::string& key, std::string& val) = 0;
 	virtual void				Get(const std::string& key) = 0;

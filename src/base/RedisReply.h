@@ -17,6 +17,27 @@
 class CRedisReply;
 using redis_reply_cb_t = std::function<void(CRedisReply&&)>;
 
+using dispose_cb_t = std::function<void()>;
+
+struct redis_cmd_pipepline_t {
+	/* pipeline state */
+	enum PIPELINE_STATE {
+		QUEUEING = 1,
+		SENDING = 2,
+		COMMITTING = 3,
+		PROCESSING = 4,
+		PROCESS_OVER = 5,
+	};
+
+	int _sn;
+	std::string _commands;
+	int _built_num;
+	int _processed_num;
+	redis_reply_cb_t _reply_cb;
+	dispose_cb_t _dispose_cb;
+	PIPELINE_STATE _state;
+};
+
 //------------------------------------------------------------------------------
 /**
 @brief CRedisReply
@@ -81,14 +102,14 @@ public:
 	//! Value getters
 	std::vector<CRedisReply>& as_array();
 	std::string& as_string();
+	const std::string& as_safe_string();
 	int64_t as_integer() const;
 
 	//! Value setters
 	void set();
-	void set(const std::string& value, string_type reply_type);
+	void set(std::string&& value, string_type reply_type);
 	void set(int64_t value);
-	void set(std::vector<CRedisReply>& rows);
-	CRedisReply& operator<<(CRedisReply&& reply);
+	void set(std::vector<CRedisReply>&& rows);
 
 	//! type getter
 	type get_type() const;

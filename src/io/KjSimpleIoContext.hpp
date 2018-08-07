@@ -45,8 +45,8 @@ public:
 	}
 
 	template <typename Func>
-	kj::PromiseForResult<Func, void> EvalLater(Func func) {
-		return kj::evalLater(func);
+	kj::PromiseForResult<Func, void> EvalForResult(Func&& func) {
+		return kj::evalLater(kj::mv(func));
 	}
 
 	template <typename T>

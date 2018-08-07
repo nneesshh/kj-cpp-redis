@@ -15,8 +15,8 @@
 #endif
 #endif
 
-#define SINGLE_COMMAND_RESERVE_SIZE	1024 * 4
-#define ALL_COMMANDS_RESERVE_SIZE	1024 * 256
+#define SINGLE_COMMAND_RESERVE_SIZE  1024 * 4
+#define ALL_COMMANDS_RESERVE_SIZE    1024 * 256
 
 //------------------------------------------------------------------------------
 /**
@@ -166,7 +166,7 @@ CRedisSubscriber::Subscribe(const std::string& channel) {
 	int nCount = _mapChannelSubscriberCounter[channel];
 	if (0 == nCount) {
 		// subscribe
-		Send({ "SUBSCRIBE", channel });
+		BuildCommand({ "SUBSCRIBE", channel });
 		CommitChannel(channel);
 	}
 
@@ -188,7 +188,7 @@ CRedisSubscriber::Psubscribe(const std::string& pattern) {
 		nCount = 0;
 
 		// psubscribe
-		Send({ "PSUBSCRIBE", pattern });
+		BuildCommand({ "PSUBSCRIBE", pattern });
 		CommitPattern(pattern);
 	}
 
@@ -212,7 +212,7 @@ CRedisSubscriber::Unsubscribe(const std::string& channel) {
 
 		if (0 == nCount) {
 			// unsubscribe
-			Send({ "UNSUBSCRIBE", channel });
+			BuildCommand({ "UNSUBSCRIBE", channel });
 			
 			redis_reply_cb_t defaultCb = [](CRedisReply&) {};
 			Commit(std::move(defaultCb));
@@ -235,7 +235,7 @@ CRedisSubscriber::Punsubscribe(const std::string& pattern) {
 
 	if (0 == nCount) {
 		// punsubscribe
-		Send({ "PUNSUBSCRIBE", pattern });
+		BuildCommand({ "PUNSUBSCRIBE", pattern });
 
 		redis_reply_cb_t defaultCb = [](CRedisReply&) {};
 		Commit(std::move(defaultCb));
@@ -248,7 +248,7 @@ CRedisSubscriber::Punsubscribe(const std::string& pattern) {
 */
 void
 CRedisSubscriber::Publish(const std::string& channel, std::string& message) {
-	Send({ "PUBLISH", channel, std::move(message) });
+	BuildCommand({ "PUBLISH", channel, std::move(message) });
 
 	redis_reply_cb_t defaultCb = [](CRedisReply&) {};
 	Commit(std::move(defaultCb));
@@ -264,7 +264,7 @@ CRedisSubscriber::Pubsub(std::string& subcommand, std::vector<std::string>& vArg
 	std::vector<std::string> vPiece(2 + szNumArgs);
 	vPiece.assign({ "PUBSUB", subcommand });
 	vPiece.insert(vPiece.end(), vArg.begin(), vArg.end());
-	Send(vPiece);
+	BuildCommand(vPiece);
 
 	CRedisReply reply = BlockingCommit();
 	if (reply.ok()
@@ -282,16 +282,6 @@ void
 CRedisSubscriber::Shutdown() {
 	_workQueue->Finish();
 	_trunkQueue->Close();
-}
-
-//------------------------------------------------------------------------------
-/**
-
-*/
-void
-CRedisSubscriber::Send(const std::vector<std::string>& vPiece) {
-	_allCommands.append(CRedisService::BuildCommand(vPiece, _singleCommand));
-	++_builtNum;
 }
 
 //------------------------------------------------------------------------------
@@ -324,8 +314,9 @@ CRedisSubscriber::CommitChannel(const std::string& channel) {
 	};
 
 	auto workCb = std::bind([this](redis_reply_cb_t& reply_cb, CRedisReply& reply) {
-		_trunkQueue->Add(std::move(reply_cb), std::move(reply));
-	}, std::move(cb), std::placeholders::_1);
+		if (reply_cb)
+			_trunkQueue->Add(std::move(reply_cb), std::move(reply));
+	}, std::move(cb), std::move(std::placeholders::_1));
 
 	auto cp = CKjRedisSubscriberWorkQueue::CreateCmdPipeline(
 		++_nextSn,
@@ -375,8 +366,9 @@ CRedisSubscriber::CommitPattern(const std::string& pattern) {
 	};
 
 	auto workCb = std::bind([this](redis_reply_cb_t& reply_cb, CRedisReply& reply) {
-		_trunkQueue->Add(std::move(reply_cb), std::move(reply));
-	}, std::move(cb), std::placeholders::_1);
+		if (reply_cb)
+			_trunkQueue->Add(std::move(reply_cb), std::move(reply));
+	}, std::move(cb), std::move(std::placeholders::_1));
 
 	auto cp = CKjRedisSubscriberWorkQueue::CreateCmdPipeline(
 		++_nextSn,
@@ -404,8 +396,9 @@ void
 CRedisSubscriber::Commit(redis_reply_cb_t&& cb) {
 
 	auto workCb = std::bind([this](redis_reply_cb_t& reply_cb, CRedisReply& reply) {
-		_trunkQueue->Add(std::move(reply_cb), std::move(reply));
-	}, std::move(cb), std::placeholders::_1);
+		if (reply_cb)
+			_trunkQueue->Add(std::move(reply_cb), std::move(reply));
+	}, std::move(cb), std::move(std::placeholders::_1));
 
 	auto cp = CKjRedisSubscriberWorkQueue::CreateCmdPipeline(
 		++_nextSn,
@@ -433,7 +426,7 @@ CRedisReply
 CRedisSubscriber::BlockingCommit() {
 
 	CRedisReply reply;
-	auto workCb = [this, &reply](CRedisReply& r) {
+	auto workCb = [this, &reply](CRedisReply&& r) {
 		reply = std::move(r);
 	};
 

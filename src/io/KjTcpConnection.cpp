@@ -17,7 +17,7 @@
 #pragma pop_macro("VOID")
 
 #define KJ_TCP_CONNECTION_READ_SIZE				4096
-#define KJ_TCP_CONNECTION_READ_RESERVE_SIZE		1024 * 64
+#define KJ_TCP_CONNECTION_READ_RESERVE_SIZE		1024 * 8
 
 //------------------------------------------------------------------------------
 /**
@@ -28,7 +28,7 @@ KjTcpConnection::KjTcpConnection(kj::Own<KjSimpleThreadIoContext> tioContext, ui
 	, _connid(connid) {
 	
 	_connAttach._readSize = KJ_TCP_CONNECTION_READ_SIZE;
-	_bbuf = bip_buf_create(KJ_TCP_CONNECTION_READ_RESERVE_SIZE);
+	_bb = bip_buf_create(KJ_TCP_CONNECTION_READ_RESERVE_SIZE);
 }
 
 //------------------------------------------------------------------------------
@@ -37,7 +37,7 @@ KjTcpConnection::KjTcpConnection(kj::Own<KjSimpleThreadIoContext> tioContext, ui
 */
 KjTcpConnection::~KjTcpConnection() {
 	FlushStream();
-	bip_buf_destroy(_bbuf);
+	bip_buf_destroy(_bb);
 }
 
 //------------------------------------------------------------------------------
@@ -129,8 +129,8 @@ KjTcpConnection::FlushStream() {
 		_disconnectFulfiller = nullptr;
 	}
 
-	// clear bbuf
-	bip_buf_reset(_bbuf);
+	// clear bb
+	bip_buf_reset(_bb);
 }
 
 //------------------------------------------------------------------------------
@@ -194,17 +194,17 @@ kj::Promise<void>
 KjTcpConnection::AsyncReadLoop() {
 
 	size_t buflen = _connAttach._readSize;
-	char *bufbase = bip_buf_force_reserve(_bbuf, &buflen);
+	char *bufbase = bip_buf_force_reserve(_bb, &buflen);
 
 	assert(bufbase && buflen > 0);
 
 	return _stream->read(bufbase, 1, buflen)
 		.then([this](size_t amount) {
 		//
-		bip_buf_commit(_bbuf, (int)amount);
+		bip_buf_commit(_bb, (int)amount);
 
 		if (_connAttach._readCb) {
-			_connAttach._readCb(*this, *_bbuf);
+			_connAttach._readCb(*this, *_bb);
 		}
 		return AsyncReadLoop();
 	});

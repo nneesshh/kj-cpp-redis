@@ -45,6 +45,14 @@ public:
 	CRedisCacheProxy(const std::string& sModuleName, const char *sMainId, const char *sSubid = "1");
 	virtual ~CRedisCacheProxy();
 
+	enum DIRTY_ENTITY_STATE_TAG {
+		Detached = 0,
+		Unchanged = 1,
+		Deleted = 2,
+		Modified = 3,
+		Added = 4
+	};
+
 	using RESULT_PAIR_LIST = std::vector<CRedisReply>;
 	using DIRTY_ENTRY_LIST = std::vector<CRedisReply>;
 
@@ -69,9 +77,11 @@ public:
 	}
 
 	void						Commit();
+
+	void						SetToHashTable(const std::string& sId, std::string& sValue);
 	void						AddToHashTable(const std::string& sId, std::string& sValue);
-	void						RemoveFromHashTable(const std::string& sId);
 	void						UpdateToHashTable(const std::string& sId, std::string& sValue);
+	void						RemoveFromHashTable(const std::string& sId);
 
 	void						Clear();
 
@@ -80,16 +90,17 @@ public:
 		Commit();
 	}
 
-	void						Remove(const std::string& sId) {
-		RemoveFromHashTable(sId);
-		Commit();
-	}
-
 	void						Update(const std::string& sId, std::string& sValue) {
 		UpdateToHashTable(sId, std::move(sValue));
 		Commit();
 	}
+
+	void						Remove(const std::string& sId) {
+		RemoveFromHashTable(sId);
+		Commit();
+	}
 	
+	void                        Set(const std::string& sId, std::string& sValue);
 	const std::string			Get(const std::string& sId);
 	void						GetAll(RESULT_PAIR_LIST& vOut);
 	void						GetPartitial(int nCount, RESULT_PAIR_LIST& vOut);
@@ -110,8 +121,8 @@ private:
 	std::string _sMainId;
 	std::string _sSubid;
 	std::string _sIdHash;
-	std::string _sIdSetOfAllKeys;
-	std::string _sIdSetOfDirtyKeys;
+	std::string _sIdHashOfDirty;
+	std::string _sIdHashOfDirtyState;
 
 	friend CRedisHashTableBatchGetter;
 };

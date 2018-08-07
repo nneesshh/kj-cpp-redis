@@ -57,8 +57,7 @@ void
 CRedisRankingProxy::Commit() {
 	redis_service_entry_t *entry = static_cast<redis_service_entry_t *>(_refEntry);
 	IRedisService *redisservice = static_cast<IRedisService *>(entry->_redisservice);
-	redis_reply_cb_t defaultCb = [](CRedisReply&) {};
-	redisservice->Client().Commit(std::move(defaultCb));
+	redisservice->Client().Commit(nullptr);
 }
 
 //------------------------------------------------------------------------------
