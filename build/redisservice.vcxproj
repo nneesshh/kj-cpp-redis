@@ -225,7 +225,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../src;../src/capnp;C:\Program Files (x86)\Visual Leak Detector\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;HAVE_STRUCT_TIMESPEC;_ENABLE_ATOMIC_ALIGNMENT_FIX;MY_REDIS_BUILDING_SHARED;NO_REDISSERVICE_DEBUG_CMD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <Optimization>Disabled</Optimization>
+      <Optimization>Full</Optimization>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
     </ClCompile>
     <Link>

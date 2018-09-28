@@ -30,7 +30,6 @@ extern INLINE void			bip_buf_destroy(bip_buf_t *bb);
 extern INLINE void			bip_buf_reset(bip_buf_t *bb);
 extern INLINE int			bip_buf_is_full(const bip_buf_t *bb);
 extern INLINE int			bip_buf_is_empty(const bip_buf_t *bb);
-extern INLINE size_t		bip_buf_get_free_space(const bip_buf_t *bb);
 
 extern INLINE size_t		bip_buf_get_capacity(const bip_buf_t *bb);
 extern INLINE size_t		bip_buf_get_committed_size(const bip_buf_t *bb);
@@ -44,7 +43,7 @@ extern INLINE char *		bip_buf_find_str(const bip_buf_t *bb, const char *str, siz
 extern char *				bip_buf_reserve(bip_buf_t *bb, size_t *size);
 
 /* Like "bip_buf_reserve", but would expand buffer if not enough free space. */
-extern char *				bip_buf_force_reserve(bip_buf_t *bb, size_t *size);
+extern char *				bip_buf_force_reserve(bip_buf_t *bb, const size_t size);
 
 /* Commits space that has been written to in the buffer. */
 extern void					bip_buf_commit(bip_buf_t *bb, size_t size);

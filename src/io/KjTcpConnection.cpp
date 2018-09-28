@@ -194,9 +194,9 @@ kj::Promise<void>
 KjTcpConnection::AsyncReadLoop() {
 
 	size_t buflen = _connAttach._readSize;
-	char *bufbase = bip_buf_force_reserve(_bb, &buflen);
+	char *bufbase = bip_buf_force_reserve(_bb, buflen);
 
-	assert(bufbase && buflen > 0);
+	assert(bufbase);
 
 	return _stream->read(bufbase, 1, buflen)
 		.then([this](size_t amount) {

@@ -61,7 +61,7 @@ public:
 	virtual void				Set(const std::string& key, std::string& val) = 0;
 	virtual void				Get(const std::string& key) = 0;
 	virtual void				GetSet(const std::string& key, std::string& val) = 0;
-	virtual void				Del(std::vector<std::string>& vKey) = 0;
+	virtual void				Del(const std::vector<std::string>& vKey) = 0;
 
 	virtual void				LPush(const std::string& key, std::vector<std::string>& vVal) = 0;
 	virtual void				RPush(const std::string& key, std::vector<std::string>& vVal) = 0;
@@ -72,7 +72,10 @@ public:
 	virtual void				LRange(const std::string& key, int nStart, int nStop) = 0;
 	virtual void				LTrim(const std::string& key, int nStart, int nStop) = 0;
 
-	virtual void				HDel(const std::string& key, std::vector<std::string>& vField) = 0;
+	virtual void				HKeys(const std::string& key) = 0;
+	virtual void				HVals(const std::string& key) = 0;
+
+	virtual void				HDel(const std::string& key, const std::vector<std::string>& vField) = 0;
 	virtual void				HGetAll(const std::string& key) = 0;
 	virtual void				HGet(const std::string& key, const std::string& field) = 0;
 	virtual void				HSet(const std::string& key, const std::string& field, std::string& val) = 0;
@@ -87,8 +90,8 @@ public:
 	virtual void				SMembers(const std::string& key) = 0;
 
 	virtual void				ScriptLoad(const std::string& script) = 0;
-	virtual void				Eval(const std::string& script, std::vector<std::string>& vKey, std::vector<std::string>& vArg) = 0;
-	virtual void				EvalSha(const std::string& sha, std::vector<std::string>& vKey, std::vector<std::string>& vArg) = 0;
+	virtual void				Eval(const std::string& script, const std::vector<std::string>& vKey, std::vector<std::string>& vArg) = 0;
+	virtual void				EvalSha(const std::string& sha, const std::vector<std::string>& vKey, std::vector<std::string>& vArg) = 0;
 
 	virtual void				Shutdown() = 0;
 

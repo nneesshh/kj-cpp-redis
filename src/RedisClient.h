@@ -61,7 +61,7 @@ public:
 		BuildCommand({ "GETSET", key, std::move(val) });
 	}
 
-	virtual void				Del(std::vector<std::string>& vKey) override {
+	virtual void				Del(const std::vector<std::string>& vKey) override {
 		std::vector<std::string> vPiece(1 + vKey.size());
 		vPiece.assign({ std::string("DEL") });
 		vPiece.insert(vPiece.end(), vKey.begin(), vKey.end());
@@ -106,7 +106,15 @@ public:
 		BuildCommand({ "LTRIM", key, std::to_string(nStart), std::to_string(nStop) });
 	}
 
-	virtual void				HDel(const std::string& key, std::vector<std::string>& vField) override {
+	virtual void				HKeys(const std::string& key) override {
+		BuildCommand({ "HKEYS", key });
+	}
+
+	virtual void				HVals(const std::string& key) override {
+		BuildCommand({ "HVals", key });
+	}
+
+	virtual void				HDel(const std::string& key, const std::vector<std::string>& vField) override {
 		std::vector<std::string> vPiece(2 + vField.size());
 		vPiece.assign({ "HDEL", key });
 		vPiece.insert(vPiece.end(), vField.begin(), vField.end());
@@ -168,7 +176,7 @@ public:
 		BuildCommand({ "SCRIPT", "LOAD", script });
 	}
 
-	virtual void				Eval(const std::string& script, std::vector<std::string>& vKey, std::vector<std::string>& vArg) override {
+	virtual void				Eval(const std::string& script, const std::vector<std::string>& vKey, std::vector<std::string>& vArg) override {
 		size_t szNumKeys = vKey.size();
 		size_t szNumArgs = vArg.size();
 		std::vector<std::string> vPiece(3 + szNumKeys + szNumArgs);
@@ -178,7 +186,7 @@ public:
 		BuildCommand(vPiece);
 	}
 
-	virtual void				EvalSha(const std::string& sha, std::vector<std::string>& vKey, std::vector<std::string>& vArg) override {
+	virtual void				EvalSha(const std::string& sha, const std::vector<std::string>& vKey, std::vector<std::string>& vArg) override {
 		size_t szNumKeys = vKey.size();
 		size_t szNumArgs = vArg.size();
 		std::vector<std::string> vPiece(3 + szNumKeys + szNumArgs);

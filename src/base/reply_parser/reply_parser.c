@@ -2,8 +2,10 @@
 #include <time.h>
 #include <assert.h>
 
-#ifdef _DEBUG
-#include <vld.h>
+#ifdef _MSC_VER
+# ifdef _DEBUG
+#  include <vld.h>
+# endif
 #endif
 
 #include "reply_builder.h"

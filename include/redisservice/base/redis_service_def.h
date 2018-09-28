@@ -12,17 +12,23 @@ struct redis_stub_param_t {
 };
 
 struct redis_service_entry_t {
+	redis_service_entry_t() {
+		_nId = 0;
+		_redisservice = nullptr;
+	}
+
+	~redis_service_entry_t() {
+		_redisservice = nullptr;
+	}
+
 	int _nId;
-	std::string _sModuleName;
 	redis_stub_param_t _param;
 	void *_redisservice;
 
+	std::string _sModuleName;
 	std::string _cacheDirtyEntry;
 	std::string _listDirtyEntry;
 	int _dumpInterval;
-
-	std::string	_queryCacheKey;
-	std::string	_updateCacheKey;
 };
 
 /*EOF*/

@@ -78,7 +78,7 @@ fast_strstr(const char *haystack, size_t haystacklen, const char *needle, size_t
 		// equality.
 		if (0 == sums_diff
 			&& needle_first == *sub_start // Avoids some calls to memcmp.
-			&& memcmp(sub_start, needle, needle_len_1) == 0)
+			&& 0 == memcmp(sub_start, needle, needle_len_1))
 			return (char *)sub_start;
 	}
 	return NULL;
@@ -157,14 +157,6 @@ bip_buf_is_full(const bip_buf_t *bb) {
 *
 */
 size_t
-bip_buf_get_free_space(const bip_buf_t *bb) {
-	return bip_buf_get_capacity(bb) - bip_buf_get_committed_size(bb);
-}
-
-/**------------------------------------------------------------------------------
-*
-*/
-size_t
 bip_buf_get_capacity(const bip_buf_t *bb) {
 	return bb->_available_capacity;
 }
@@ -220,7 +212,7 @@ bip_buf_find_str(const bip_buf_t *bb, const char *str, size_t str_len) {
 */
 char *
 bip_buf_reserve(bip_buf_t *bb, size_t *size) {
-	size_t reg_a_size;
+	size_t region_a_size, freespace;
 
 	// check already reserve
 	if (bip_buf_get_reservation_size(bb) > 0) {
@@ -228,20 +220,26 @@ bip_buf_reserve(bip_buf_t *bb, size_t *size) {
 		return NULL;
 	}
 	else {
-		// we always allocate reserve space after A.
-		if (((*size) = bip_buf_get_free_space(bb)) == 0)
+		region_a_size = bip_buf_get_committed_size(bb);
+		freespace = bb->_available_capacity - region_a_size;
+
+		if (0 == freespace) {
+			(*size) = 0;
 			return NULL;
+		}
 
-		// check wrap Region A
-		if (bb->_a_start >= bb->_available_capacity) {
-			reg_a_size = bip_buf_get_committed_size(bb);
+		(*size) = freespace; /* all freespace would be reserved */
 
+		// check Region A
+		if (0 == region_a_size) {
+			bb->_a_start = bb->_a_end = 0;
+		}
+		else if (bb->_available_capacity + bb->_available_capacity - bb->_a_end < (*size)) {
 			// wrap A
-			if (reg_a_size > 0)
-				memcpy(bb->_buffer, bb->_buffer + bb->_a_start, reg_a_size);
+			memcpy(bb->_buffer, bb->_buffer + bb->_a_start, region_a_size);
 
 			bb->_a_start = 0;
-			bb->_a_end = reg_a_size;
+			bb->_a_end = region_a_size;
 		}
 
 		bb->_r_start = bb->_a_end;
@@ -254,32 +252,35 @@ bip_buf_reserve(bip_buf_t *bb, size_t *size) {
 *
 */
 char *
-bip_buf_force_reserve(bip_buf_t *bb, size_t *size) {
-	size_t freespace, buf_size;
+bip_buf_force_reserve(bip_buf_t *bb, const size_t size) {
+	size_t region_a_size, freespace, buf_size;
 
 	// check already reserve
-	if (bip_buf_get_reservation_size(bb) > 0) {
-		(*size) = 0;
+	if (bip_buf_get_reservation_size(bb) > 0
+		|| 0 == size) {
 		return NULL;
 	}
 	else {
-		freespace = bip_buf_get_free_space(bb);
-		if (((*size) = (0 == (*size) || (*size) >= 512 * 1024 * 1024) ? freespace : (*size)) == 0)
-			return NULL;
+		region_a_size = bip_buf_get_committed_size(bb);
+		freespace = bb->_available_capacity - region_a_size;
 
-		// we always allocate reserve space after A.
-		if ((*size) > freespace) {
+		if (0 == freespace) {
+			return NULL;
+		}
+
+		// is freespace enough ?
+		if (size > freespace) {
 			buf_size = bip_buf_get_committed_size(bb);
 			if (0 == buf_size) {
-				bb->_available_capacity = next_power_of_two(bb->_available_capacity + (*size));
-				bb->_buffer = malloc(bb->_available_capacity * 2);
+				bb->_available_capacity = next_power_of_two(bb->_available_capacity + size);
+				bb->_buffer = malloc(bb->_available_capacity + bb->_available_capacity); /* bb->_available_capacity * 2 */
 
 				bb->_a_start = bb->_a_end = 0;
 			}
 			else {
 				char *tmp = bb->_buffer;
-				bb->_available_capacity = next_power_of_two(bb->_available_capacity + (*size));
-				bb->_buffer = malloc(bb->_available_capacity * 2);
+				bb->_available_capacity = next_power_of_two(bb->_available_capacity + size);
+				bb->_buffer = malloc(bb->_available_capacity + bb->_available_capacity); /* bb->_available_capacity * 2 */
 				memcpy(bb->_buffer, tmp + bb->_a_start, buf_size);
 				free(tmp);
 
@@ -287,9 +288,24 @@ bip_buf_force_reserve(bip_buf_t *bb, size_t *size) {
 				bb->_a_end = buf_size;
 			}
 		}
+		else {
+			region_a_size = bip_buf_get_committed_size(bb);
+
+			// check Region A
+			if (0 == region_a_size) {
+				bb->_a_start = bb->_a_end = 0;
+			}
+			else if (bb->_available_capacity + bb->_available_capacity - bb->_a_end < size) {
+				// wrap A
+				memcpy(bb->_buffer, bb->_buffer + bb->_a_start, region_a_size);
+
+				bb->_a_start = 0;
+				bb->_a_end = region_a_size;
+			}
+		}
 
 		bb->_r_start = bb->_a_end;
-		bb->_r_end = bb->_r_start + (*size);
+		bb->_r_end = bb->_r_start + size;
 		return bb->_buffer + bb->_r_start;
 	}
 }
@@ -301,26 +317,12 @@ void
 bip_buf_commit(bip_buf_t *bb, size_t size) {
 	// check already reserve
 	size_t reservation_size = bip_buf_get_reservation_size(bb);
-	size_t reg_a_size;
-
 	if (reservation_size > 0) {
 		// if we try to commit more space than we asked for, clip to the size we asked for.
 		size = (size > reservation_size) ? reservation_size : size;
 
 		// commit
 		bb->_a_end = bb->_r_start + size;
-	}
-
-	// check wrap Region A
-	if (bb->_a_start >= bb->_available_capacity) {
-		reg_a_size = bip_buf_get_committed_size(bb);
-
-		// wrap A
-		if (reg_a_size > 0)
-			memcpy(bb->_buffer, bb->_buffer + bb->_a_start, reg_a_size);
-
-		bb->_a_start = 0;
-		bb->_a_end = reg_a_size;
 	}
 
 	// release reservation
