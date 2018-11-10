@@ -49,8 +49,8 @@ struct TimerImpl::Impl {
 
 class TimerImpl::TimerPromiseAdapter {
 public:
-  TimerPromiseAdapter(PromiseFulfiller<void>& fulfiller, TimerImpl::Impl& impl, TimePoint time, const char *timer_name)
-      : time(time), fulfiller(fulfiller), impl(impl), name(kj::heapString(timer_name)) {
+  TimerPromiseAdapter(PromiseFulfiller<void>& fulfiller, TimerImpl::Impl& impl, TimePoint time)
+      : time(time), fulfiller(fulfiller), impl(impl) {
     pos = impl.timers.insert(this);
   }
 
@@ -67,7 +67,6 @@ public:
   }
 
   const TimePoint time;
-  kj::String name;
 
 private:
   PromiseFulfiller<void>& fulfiller;
@@ -80,12 +79,12 @@ inline bool TimerImpl::Impl::TimerBefore::operator()(
   return lhs->time < rhs->time;
 }
 
-Promise<void> TimerImpl::atTime(TimePoint time, const char *timer_name) {
-  return newAdaptedPromise<void, TimerPromiseAdapter>(*impl, time, timer_name);
+Promise<void> TimerImpl::atTime(TimePoint time) {
+  return newAdaptedPromise<void, TimerPromiseAdapter>(*impl, time);
 }
 
-Promise<void> TimerImpl::afterDelay(Duration delay, const char *timer_name) {
-  return newAdaptedPromise<void, TimerPromiseAdapter>(*impl, time + delay, timer_name);
+Promise<void> TimerImpl::afterDelay(Duration delay) {
+  return newAdaptedPromise<void, TimerPromiseAdapter>(*impl, time + delay);
 }
 
 TimerImpl::TimerImpl(TimePoint startTime)

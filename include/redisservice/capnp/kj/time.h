@@ -85,20 +85,20 @@ public:
   // changes in the wall clock. The value is updated every time the event loop waits,
   // and is constant in-between waits.
 
-  virtual Promise<void> atTime(TimePoint time, const char *timer_name) = 0;
+  virtual Promise<void> atTime(TimePoint time) = 0;
   // Returns a promise that returns as soon as now() >= time.
 
-  virtual Promise<void> afterDelay(Duration delay, const char *timer_name) = 0;
+  virtual Promise<void> afterDelay(Duration delay) = 0;
   // Equivalent to atTime(now() + delay).
 
   template <typename T>
-  Promise<T> timeoutAt(TimePoint time, const char *timer_name, Promise<T>&& promise) KJ_WARN_UNUSED_RESULT;
+  Promise<T> timeoutAt(TimePoint time, Promise<T>&& promise) KJ_WARN_UNUSED_RESULT;
   // Return a promise equivalent to `promise` but which throws an exception (and cancels the
   // original promise) if it hasn't completed by `time`. The thrown exception is of type
   // "OVERLOADED".
 
   template <typename T>
-  Promise<T> timeoutAfter(Duration delay, const char *timer_name, Promise<T>&& promise) KJ_WARN_UNUSED_RESULT;
+  Promise<T> timeoutAfter(Duration delay, Promise<T>&& promise) KJ_WARN_UNUSED_RESULT;
   // Return a promise equivalent to `promise` but which throws an exception (and cancels the
   // original promise) if it hasn't completed after `delay` from now. The thrown exception is of
   // type "OVERLOADED".
@@ -140,8 +140,8 @@ public:
 
   // implements Timer ----------------------------------------------------------
   TimePoint now() override;
-  Promise<void> atTime(TimePoint time, const char *timer_name) override;
-  Promise<void> afterDelay(Duration delay, const char *timer_name) override;
+  Promise<void> atTime(TimePoint time) override;
+  Promise<void> afterDelay(Duration delay) override;
 
 private:
   struct Impl;
@@ -154,15 +154,15 @@ private:
 // inline implementation details
 
 template <typename T>
-Promise<T> Timer::timeoutAt(TimePoint time, const char *timer_name, Promise<T>&& promise) {
+Promise<T> Timer::timeoutAt(TimePoint time, Promise<T>&& promise) {
   return promise.exclusiveJoin(atTime(time, timer_name).then([]() -> kj::Promise<T> {
     return makeTimeoutException();
   }));
 }
 
 template <typename T>
-Promise<T> Timer::timeoutAfter(Duration delay, const char *timer_name, Promise<T>&& promise) {
-  return promise.exclusiveJoin(afterDelay(delay, timer_name).then([]() -> kj::Promise<T> {
+Promise<T> Timer::timeoutAfter(Duration delay, Promise<T>&& promise) {
+  return promise.exclusiveJoin(afterDelay(delay).then([]() -> kj::Promise<T> {
     return makeTimeoutException();
   }));
 }

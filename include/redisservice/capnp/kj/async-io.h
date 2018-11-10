@@ -102,6 +102,15 @@ public:
   // The default implementation always returns null.
 };
 
+/**
+* A type wide enough to hold the output of "socket()" or "accept()".  On
+* Windows, this is an intptr_t; elsewhere, it is an int. */
+#ifdef _WIN32
+#define kj_socket_t intptr_t
+#else
+#define kj_socket_t int
+#endif
+
 class AsyncIoStream: public AsyncInputStream, public AsyncOutputStream {
   // A combination input and output stream.
 
@@ -128,6 +137,9 @@ public:
   // Note that we don't provide methods that return NetworkAddress because it usually wouldn't
   // be useful. You can't connect() to or listen() on these addresses, obviously, because they are
   // ephemeral addresses for a single connection.
+
+  virtual kj_socket_t getFd() = 0;
+
 };
 
 struct OneWayPipe {
@@ -159,6 +171,8 @@ public:
   virtual void getsockopt(int level, int option, void* value, uint* length);
   virtual void setsockopt(int level, int option, const void* value, uint length);
   // Same as the methods of AsyncIoStream.
+
+  virtual kj_socket_t getFd() = 0;
 };
 
 // =======================================================================================

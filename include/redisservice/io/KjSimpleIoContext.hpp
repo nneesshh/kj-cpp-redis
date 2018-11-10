@@ -35,13 +35,13 @@ public:
 		return _ioContext.provider->getTimer();
 	}
 
-	kj::Promise<void>			AfterDelay(kj::Duration delay, const char *timer_name) {
-		return GetTimer().afterDelay(delay, timer_name);
+	kj::Promise<void>			AfterDelay(kj::Duration delay) {
+		return GetTimer().afterDelay(delay);
 	}
 
 	template <typename T>
-	kj::Promise<T>				TimeoutAfter(kj::Duration delay, const char *timer_name, kj::Promise<T>&& p) {
-		return GetTimer().timeoutAfter(delay, timer_name, kj::mv(p));
+	kj::Promise<T>				TimeoutAfter(kj::Duration delay, kj::Promise<T>&& p) {
+		return GetTimer().timeoutAfter(delay, kj::mv(p));
 	}
 
 	template <typename Func>

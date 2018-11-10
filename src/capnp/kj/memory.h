@@ -166,10 +166,50 @@ public:
   }
 
 #define NULLCHECK KJ_IREQUIRE(ptr != nullptr, "null Own<> dereference")
-  inline T* operator->() { NULLCHECK; return ptr; }
-  inline const T* operator->() const { NULLCHECK; return ptr; }
-  inline T& operator*() { NULLCHECK; return *ptr; }
-  inline const T& operator*() const { NULLCHECK; return *ptr; }
+  inline T* operator->() {
+#ifdef _DEBUG
+	  if (nullptr == ptr) {
+		  int *p = nullptr;
+		  (*p) = 0;
+	  }
+#endif
+	  NULLCHECK;
+	  return ptr;
+  }
+
+  inline const T* operator->() const {
+#ifdef _DEBUG
+	  if (nullptr == ptr) {
+		  int *p = nullptr;
+		  (*p) = 0;
+	  }
+#endif
+	  NULLCHECK;
+	  return ptr;
+  }
+
+  inline T& operator*() {
+#ifdef _DEBUG
+	  if (nullptr == ptr) {
+		  int *p = nullptr;
+		  (*p) = 0;
+	  }
+#endif
+	  NULLCHECK;
+	  return *ptr;
+  }
+
+  inline const T& operator*() const {
+#ifdef _DEBUG
+	  if (nullptr == ptr) {
+		  int *p = nullptr;
+		  (*p) = 0;
+	  }
+#endif
+	  NULLCHECK;
+	  return *ptr;
+  }
+
 #undef NULLCHECK
   inline T* get() { return ptr; }
   inline const T* get() const { return ptr; }

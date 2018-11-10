@@ -15,8 +15,8 @@ struct redis_thread_worker_t {
 static kj::Promise<void>
 check_quit_loop(CKjRedisClientWorkQueue& q, redis_thread_worker_t& worker, kj::PromiseFulfiller<void> *fulfiller) {
 	if (!q.IsDone()) {
-		// wait 500 ms
-		return worker._tioContext->GetTimer().afterDelay(500 * kj::MICROSECONDS, "delay and check quit loop")
+		// "delay and check quit loop" -- wait 500 ms
+		return worker._tioContext->GetTimer().afterDelay(500 * kj::MICROSECONDS)
 			.then([&q, &worker, fulfiller]() {
 			// loop
 			return check_quit_loop(q, worker, fulfiller);
@@ -97,7 +97,15 @@ CKjRedisClientWorkQueue::Add(redis_cmd_pipepline_t&& cmd) {
 
 	// write opcode to pipe
 	++_opCodeSend;
-	_pipeThread.pipe->write((const void *)&_opCodeSend, 1);
+	
+	// pipe write maybe trigger exception at once, so we must catch it manually
+	KJ_IF_MAYBE(e, kj::runCatchingExceptions([this]() {
+		_pipeThread.pipe->write((const void *)&_opCodeSend, 1);
+	})) {
+		fprintf(stderr, "[CKjRedisSubscriberWorkQueue::Add()] desc(%s) -- pause!!!\n", e->getDescription().cStr());
+		system("pause");
+		kj::throwFatalException(kj::mv(*e));
+	}
 	return true;
 }
 
@@ -147,21 +155,19 @@ CKjRedisClientWorkQueue::Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream&
 	auto paf = kj::newPromiseAndFulfiller<void>();
 	worker._conn->Open(_refParam);
 
-	// check quit
+	// "check_quit_loop"
 	worker._tasks->add(
 		check_quit_loop(
 			*this,
 			worker,
-			paf.fulfiller.get()),
-		"check_quit_loop");
+			paf.fulfiller.get()));
 
-	// read pipe
+	// "read_pipe_loop"
 	worker._tasks->add(
 		read_pipe_loop(
 			*this,
 			worker,
-			stream),
-		"read_pipe_loop");
+			stream));
 
 	//
 	paf.promise.wait(worker._tioContext->GetWaitScope());

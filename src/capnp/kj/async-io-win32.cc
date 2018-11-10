@@ -170,7 +170,7 @@ int win32Socketpair(SOCKET socks[2]) {
 namespace {
 
 bool detectWine() {
-  HMODULE hntdll = GetModuleHandle("ntdll.dll");
+  HMODULE hntdll = GetModuleHandleA("ntdll.dll");
   if(hntdll == NULL) return false;
   return GetProcAddress(hntdll, "wine_get_version") != nullptr;
 }
@@ -325,6 +325,10 @@ public:
     socklen_t socklen = *length;
     KJ_WINSOCK(::getpeername(fd, addr, &socklen));
     *length = socklen;
+  }
+
+  kj_socket_t getFd() {
+	  return fd;
   }
 
 private:
@@ -882,9 +886,14 @@ public:
                             reinterpret_cast<char*>(value), &socklen));
     *length = socklen;
   }
+
   void setsockopt(int level, int option, const void* value, uint length) override {
     KJ_WINSOCK(::setsockopt(fd, level, option,
                             reinterpret_cast<const char*>(value), length));
+  }
+
+  kj_socket_t getFd() {
+	  return fd;
   }
 
 public:
@@ -963,7 +972,7 @@ public:
     {
       KJ_ON_SCOPE_FAILURE(closesocket(fd));
 
-	  // modified by n.lee to disable SO_REUSEADDR for release version
+// modified by n.lee to disable SO_REUSEADDR for release version
 #ifdef _DEBUG
       // We always enable SO_REUSEADDR because having to take your server down for five minutes
       // before it can restart really sucks.

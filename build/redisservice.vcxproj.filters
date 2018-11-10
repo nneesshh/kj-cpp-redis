@@ -281,22 +281,10 @@
     <ClCompile Include="..\src\capnp\kj\main.cc">
       <Filter>src\capnp\kj</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\capnp\kj\memory.cc">
-      <Filter>src\capnp\kj</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\capnp\kj\mutex.cc">
       <Filter>src\capnp\kj</Filter>
     </ClCompile>
     <ClCompile Include="..\src\capnp\kj\units.cc">
-      <Filter>src\capnp\kj</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\capnp\kj\time.cc">
-      <Filter>src\capnp\kj</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\capnp\kj\thread.cc">
-      <Filter>src\capnp\kj</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\capnp\kj\test-helpers.cc">
       <Filter>src\capnp\kj</Filter>
     </ClCompile>
     <ClCompile Include="..\src\capnp\kj\string-tree.cc">
@@ -469,6 +457,15 @@
     </ClCompile>
     <ClCompile Include="..\src\RedisCommandBuilder.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\capnp\kj\kj_thread.cc">
+      <Filter>src\capnp\kj</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\capnp\kj\kj_time.cc">
+      <Filter>src\capnp\kj</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\capnp\kj\kj_memory.cc">
+      <Filter>src\capnp\kj</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -84,7 +84,7 @@ class Event {
   // internally.
 
 public:
-  Event(const char *eventName);
+  Event();
   ~Event() noexcept(false);
   KJ_DISALLOW_COPY(Event);
 
@@ -125,9 +125,6 @@ private:
   Event* next;
   Event** prev;
   bool firing = false;
-
-public:
-  kj::String name;
 };
 
 class PromiseNode {

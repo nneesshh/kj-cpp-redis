@@ -35,13 +35,13 @@ public:
 		return _ioProvider.getTimer();
 	}
 
-	kj::Promise<void>			AfterDelay(kj::Duration delay, const char *timer_name) {
-		return GetTimer().afterDelay(delay, timer_name);
+	kj::Promise<void>			AfterDelay(kj::Duration delay) {
+		return GetTimer().afterDelay(delay);
 	}
 
 	template <typename T>
-	kj::Promise<T>				TimeoutAfter(kj::Duration delay, const char *timer_name, kj::Promise<T>&& p) {
-		return GetTimer().timeoutAfter(delay, timer_name, kj::mv(p));
+	kj::Promise<T>				TimeoutAfter(kj::Duration delay, kj::Promise<T>&& p) {
+		return GetTimer().timeoutAfter(delay, kj::mv(p));
 	}
 
 	template <typename Func>
@@ -62,8 +62,8 @@ public:
 		return kj::heap<kj::TaskSet>(errorHandler);
 	}
 
-	void                        AddTask(kj::Promise<void>&& promise, const char *name) {
-		_defaultTasks->add(kj::mv(promise), name);
+	void                        AddTask(kj::Promise<void>&& promise) {
+		_defaultTasks->add(kj::mv(promise));
 	}
 
 	kj::AsyncIoProvider::PipeThread NewPipeThread(kj::Function<void(kj::AsyncIoProvider&, kj::AsyncIoStream&, kj::WaitScope&)>&& startFunc) {

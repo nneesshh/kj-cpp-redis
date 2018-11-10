@@ -364,7 +364,7 @@ void Debug::Fault::init(
                                 FORMAT_MESSAGE_IGNORE_INSERTS,
                                 NULL, osErrorNumber.number,
                                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                (LPTSTR) &ptr, 0, NULL);
+                                (LPSTR) &ptr, 0, NULL);
 
   if (result > 0) {
     KJ_DEFER(LocalFree(ptr));
@@ -396,7 +396,8 @@ int Debug::getOsErrorNumber(bool nonblocking) {
 
 #if _WIN32
 Debug::Win32Error Debug::getWin32Error() {
-  return Win32Error(::GetLastError());
+  auto eno = ::GetLastError();
+  return Win32Error(eno);
 }
 #endif
 

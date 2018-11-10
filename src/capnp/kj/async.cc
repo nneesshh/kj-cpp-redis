@@ -56,7 +56,7 @@ EventLoop& currentEventLoop() {
 
 class BoolEvent: public _::Event {
 public:
-  BoolEvent() : Event("bool") {}
+  BoolEvent() : Event() {}
   bool fired = false;
 
   Maybe<Own<_::Event>> fire() override {
@@ -106,8 +106,8 @@ public:
 
   class Task final: public Event {
   public:
-    Task(TaskSetImpl& taskSet, Own<_::PromiseNode>&& nodeParam, const char *taskName)
-        : Event(taskName), taskSet(taskSet), node(kj::mv(nodeParam)) {
+    Task(TaskSetImpl& taskSet, Own<_::PromiseNode>&& nodeParam)
+        : Event(), taskSet(taskSet), node(kj::mv(nodeParam)) {
       node->setSelfPointer(&node);
       node->onReady(*this);
     }
@@ -135,9 +135,6 @@ public:
       KJ_ASSERT(iter != taskSet.tasks.end());
       Own<Event> self = kj::mv(iter->second);
       taskSet.tasks.erase(iter);
-
-	  taskSet.taskNum[name.cStr()] = taskSet.taskNum[name.cStr()] - 1;
-	  taskSet.taskNum["__TotalNum__"] = (int)taskSet.tasks.size();
       return mv(self);
     }
 
@@ -150,13 +147,10 @@ public:
     kj::Own<_::PromiseNode> node;
   };
 
-  void add(Promise<void>&& promise, const char *name) {
-    auto task = heap<Task>(*this, kj::mv(promise.node), name);
+  void add(Promise<void>&& promise) {
+    auto task = heap<Task>(*this, kj::mv(promise.node));
     Task* ptr = task;
     tasks.insert(std::make_pair(ptr, kj::mv(task)));
-
-	taskNum["__TotalNum__"] = (int)tasks.size();
-	taskNum[name] = taskNum[name] + 1;
   }
 
   kj::String trace() {
@@ -167,22 +161,11 @@ public:
     return kj::strArray(traces, "\n============================================\n");
   }
 
-  kj::String trace2() {
-	  kj::Vector<kj::String> traces;
-	  for (auto& entry : taskNum) {
-		  traces.add(kj::str(entry.first, "=", entry.second, "\t"));
-	  }
-	  return kj::strArray(traces, "\n");
-  }
-
 private:
   TaskSet::ErrorHandler& errorHandler;
 
   // TODO(perf):  Use a linked list instead.
   std::map<Task*, Own<Task>> tasks;
-
-public:
-  std::map<std::string, int> taskNum;
 };
 
 class LoggingErrorHandler: public TaskSet::ErrorHandler {
@@ -378,11 +361,11 @@ void NeverDone::wait(WaitScope& waitScope) const {
 void detach(kj::Promise<void>&& promise) {
   EventLoop& loop = currentEventLoop();
   KJ_REQUIRE(loop.daemons.get() != nullptr, "EventLoop is shutting down.") { return; }
-  loop.daemons->add(kj::mv(promise), "d");
+  loop.daemons->add(kj::mv(promise));
 }
 
-Event::Event(const char *eventName)
-    : loop(currentEventLoop()), next(nullptr), prev(nullptr), name(kj::heapString(eventName)) {}
+Event::Event()
+    : loop(currentEventLoop()), next(nullptr), prev(nullptr) {}
 
 Event::~Event() noexcept(false) {
   if (prev != nullptr) {
@@ -498,16 +481,12 @@ TaskSet::TaskSet(ErrorHandler& errorHandler)
 
 TaskSet::~TaskSet() noexcept(false) {}
 
-void TaskSet::add(Promise<void>&& promise, const char *name) {
-  impl->add(kj::mv(promise), name);
+void TaskSet::add(Promise<void>&& promise) {
+  impl->add(kj::mv(promise));
 }
 
 kj::String TaskSet::trace() {
   return impl->trace();
-}
-
-kj::String TaskSet::trace2() {
-	return impl->trace2();
 }
 
 namespace _ {  // private
@@ -668,7 +647,7 @@ PromiseNode* ForkBranchBase::getInnerForTrace() {
 // -------------------------------------------------------------------
 
 ForkHubBase::ForkHubBase(Own<PromiseNode>&& innerParam, ExceptionOrValue& resultRef)
-    : Event("ForkHub"), inner(kj::mv(innerParam)), resultRef(resultRef) {
+    : Event(), inner(kj::mv(innerParam)), resultRef(resultRef) {
   inner->setSelfPointer(&inner);
   inner->onReady(*this);
 }
@@ -702,7 +681,7 @@ _::PromiseNode* ForkHubBase::getInnerForTrace() {
 // -------------------------------------------------------------------
 
 ChainPromiseNode::ChainPromiseNode(Own<PromiseNode> innerParam)
-    : Event("Chain"), state(STEP1), inner(kj::mv(innerParam)) {
+    : Event(), state(STEP1), inner(kj::mv(innerParam)) {
   inner->setSelfPointer(&inner);
   inner->onReady(*this);
 }
@@ -817,7 +796,7 @@ PromiseNode* ExclusiveJoinPromiseNode::getInnerForTrace() {
 
 ExclusiveJoinPromiseNode::Branch::Branch(
     ExclusiveJoinPromiseNode& joinNode, Own<PromiseNode> dependencyParam)
-    : Event("ExclusiveJoin_Branch"), joinNode(joinNode), dependency(kj::mv(dependencyParam)) {
+    : Event(), joinNode(joinNode), dependency(kj::mv(dependencyParam)) {
   dependency->setSelfPointer(&dependency);
   dependency->onReady(*this);
 }
@@ -893,7 +872,7 @@ PromiseNode* ArrayJoinPromiseNodeBase::getInnerForTrace() {
 
 ArrayJoinPromiseNodeBase::Branch::Branch(
     ArrayJoinPromiseNodeBase& joinNode, Own<PromiseNode> dependencyParam, ExceptionOrValue& output)
-    : Event("ArrayJoin_Branch"), joinNode(joinNode), dependency(kj::mv(dependencyParam)), output(output) {
+    : Event(), joinNode(joinNode), dependency(kj::mv(dependencyParam)), output(output) {
   dependency->setSelfPointer(&dependency);
   dependency->onReady(*this);
 }
@@ -941,7 +920,7 @@ namespace _ {  // (private)
 
 EagerPromiseNodeBase::EagerPromiseNodeBase(
     Own<PromiseNode>&& dependencyParam, ExceptionOrValue& resultRef)
-    : Event("Eager"), dependency(kj::mv(dependencyParam)), resultRef(resultRef) {
+    : Event(), dependency(kj::mv(dependencyParam)), resultRef(resultRef) {
   dependency->setSelfPointer(&dependency);
   dependency->onReady(*this);
 }

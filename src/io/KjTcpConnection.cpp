@@ -119,8 +119,14 @@ void
 KjTcpConnection::FlushStream() {
 
 	if (_stream) {
-		_stream->abortRead();
-		_stream->shutdownWrite();
+		try {
+			_stream->abortRead();
+			_stream->shutdownWrite();
+		}
+		catch (std::exception& e) {
+			fprintf(stderr, "[KjTcpConnection::FlushStream()] abortRead or shutdownWrite exception -- what(%s)!!!"
+				, e.what());
+		}
 		_stream = nullptr;
 	}
 

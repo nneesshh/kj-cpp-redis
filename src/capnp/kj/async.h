@@ -514,12 +514,10 @@ public:
 
   ~TaskSet() noexcept(false);
 
-  void add(Promise<void>&& promise, const char *name);
+  void add(Promise<void>&& promise);
 
   kj::String trace();
   // Return debug info about all promises currently in the TaskSet.
-
-  kj::String trace2();
 
 private:
   Own<_::TaskSetImpl> impl;

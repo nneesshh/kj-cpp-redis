@@ -105,7 +105,8 @@ KjRedisClientConn::OnClientConnect(KjTcpConnection&, uint64_t connid) {
 			std::placeholders::_1,
 			std::placeholders::_2)
 	);
-	_tasks->add(kj::mv(p1), "redis client start read op");
+	// "redis client start read op"
+	_tasks->add(kj::mv(p1));
 
 	// connection init
 	{
@@ -238,7 +239,8 @@ KjRedisClientConn::Connect(const std::string& host, unsigned short port) {
 		std::bind(&KjRedisClientConn::OnClientConnect, this, std::placeholders::_1, std::placeholders::_2),
 		std::bind(&KjRedisClientConn::OnClientDisconnect, this, std::placeholders::_1, std::placeholders::_2)
 	);
-	_tasks->add(kj::mv(p1), "redis client connect");
+	// "redis client connect"
+	_tasks->add(kj::mv(p1));
 }
 
 //------------------------------------------------------------------------------
@@ -261,7 +263,8 @@ KjRedisClientConn::Commit() {
 		// stream write maybe trigger exception at once, so we must catch it manually
 		KJ_IF_MAYBE(e, kj::runCatchingExceptions(
 			[this]() {
-			_tasks->add(CommitLoop(), "commit loop");
+			// "commit loop"
+			_tasks->add(CommitLoop());
 		})) {
 			taskFailed(kj::mv(*e));
 		}
@@ -365,14 +368,15 @@ KjRedisClientConn::DelayReconnect() {
 		fprintf(stderr, "[KjRedisClientConn::DelayReconnect()] connid(%08llu)host(%s)port(%d), reconnect after (%d) seconds...\n",
 			_kjconn.GetConnId(), _kjconn.GetHost().cStr(), _kjconn.GetPort(), nDelaySeconds);
 
-
-		auto p1 = _tioContext->AfterDelay(nDelaySeconds * kj::SECONDS, "reconnect")
+		// "reconnect"
+		auto p1 = _tioContext->AfterDelay(nDelaySeconds * kj::SECONDS)
 			.then([this]() {
 
 			_bDelayReconnecting = false;
 			return _kjconn.Reconnect();
 		});
-		_tasks->add(kj::mv(p1), "redis client delay reconnect");
+		// "redis client delay reconnect"
+		_tasks->add(kj::mv(p1));
 	}
 }
 
@@ -398,7 +402,8 @@ KjRedisClientConn::CommitLoop() {
 		return kj::READY_NOW;
 	}
 	else {
-		auto p1 = _tioContext->AfterDelay(1 * kj::SECONDS, "redis client commit loop")
+		// "redis client commit loop"
+		auto p1 = _tioContext->AfterDelay(1 * kj::SECONDS)
 			.then([this]() {
 
 			return CommitLoop();
@@ -443,7 +448,8 @@ KjRedisClientConn::taskFailed(kj::Exception&& exception) {
 		//
 		DelayReconnect();
 	});
-	_tioContext->AddTask(kj::mv(p1), "redis client conn dispose");
+	// "redis client conn dispose"
+	_tioContext->AddTask(kj::mv(p1));
 }
 
 /** -- EOF -- **/
