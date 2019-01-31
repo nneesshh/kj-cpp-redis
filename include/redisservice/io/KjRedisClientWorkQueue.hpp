@@ -1,21 +1,20 @@
 #pragma once
 //------------------------------------------------------------------------------
 /**
-@class CKjRedisClientWorkQueue
+	@class CKjRedisClientWorkQueue
 
-(C) 2016 n.lee
+	(C) 2016 n.lee
 */
-#include <deque>
-#include <map>
-#include <mutex>
-#include <thread>
+#include <memory>
+
+#include "servercore/base/IServerCore.h"
 
 #include "base/concurrent/readerwriterqueue.h"
+
 #include "base/redis_service_def.h"
 #include "base/IRedisService.h"
 
-#include "io/KjSimpleIoContext.hpp"
-#include "io/KjSimpleThreadIoContext.hpp"
+class CRedisClient;
 
 //------------------------------------------------------------------------------
 /**
@@ -23,10 +22,12 @@
 */
 class CKjRedisClientWorkQueue : public kj::TaskSet::ErrorHandler {
 public:
-	explicit CKjRedisClientWorkQueue(kj::Own<KjSimpleIoContext> rootContext, redis_stub_param_t& param);
+	explicit CKjRedisClientWorkQueue(CRedisClient *pRedisHandle, redis_stub_param_t& param);
 	~CKjRedisClientWorkQueue();
 
 	using CallbackEntry = redis_cmd_pipepline_t;
+
+	void						Run(svrcore_pipeworker_t *worker);
 
 	bool						Add(redis_cmd_pipepline_t&& cmd);
 
@@ -41,8 +42,7 @@ public:
 	void						Finish();
 
 private:
-	void						Start();
-	void						Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream& stream, kj::WaitScope& waitScope, const std::map<std::string, std::string>& mapScript);
+	void						InitTasks();
 
 public:
 	static redis_cmd_pipepline_t	CreateCmdPipeline(
@@ -68,14 +68,12 @@ private:
 	void taskFailed(kj::Exception&& exception) override;
 
 private:
-	kj::Own<KjSimpleIoContext> _rootContext;
+	CRedisClient *_refRedisHandle;
 	redis_stub_param_t& _refParam;
 
-	bool _done = false;
+	volatile bool _done = false;
+	volatile bool _finished = false;
 	moodycamel::ReaderWriterQueue<CallbackEntry> _callbacks;
-
-	//! threads
-	kj::AsyncIoProvider::PipeThread _pipeThread;
 
 public:
 	char _opCodeSend = 0;

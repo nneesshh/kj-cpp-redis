@@ -25,7 +25,6 @@ extern "C" {
 #endif 
 
 #include "base/RedisReply.h"
-#include "KjSimpleThreadIoContext.hpp"
 
 class KjReplyBuilder {
 public:

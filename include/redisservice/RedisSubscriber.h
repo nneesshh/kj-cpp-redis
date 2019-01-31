@@ -5,9 +5,7 @@
 
 (C) 2016 n.lee
 */
-#include "base/IRedisService.h"
-
-#include "io/RedisTrunkQueue.h"
+#include "io/RedisSubscriberTrunkQueue.hpp"
 #include "io/KjRedisSubscriberWorkQueue.hpp"
 
 #include "RedisCommandBuilder.h"
@@ -16,10 +14,10 @@
 /**
 @brief CRedisSubscriber
 */
-class CRedisSubscriber : public IRedisSubscriber {
+class MY_REDIS_EXTERN CRedisSubscriber : public IRedisSubscriber {
 public:
-	explicit CRedisSubscriber(kj::Own<KjSimpleIoContext> rootContext, redis_stub_param_t& param);
-	virtual ~CRedisSubscriber();
+	explicit CRedisSubscriber(redis_stub_param_t& param);
+	virtual ~CRedisSubscriber() noexcept;
 
 	struct channel_message_callback_holder_t {
 		std::string _name;
@@ -64,10 +62,18 @@ private:
 
 	CRedisReply					BlockingCommit();
 
-private:
-	CRedisTrunkQueuePtr _trunkQueue;
+	void						StartPipeWorker();
+
+public:
+	CRedisSubscriberTrunkQueuePtr _trunkQueue;
 	CKjRedisSubscriberWorkQueuePtr _workQueue;
 
+	//! threads
+	svrcore_pipeworker_t *_refPipeWorker = nullptr;
+	char _trunkOpCodeSend = 0;
+	char _trunkOpCodeRecvBuf[1024];
+
+private:
 	std::vector<channel_message_callback_holder_t> _vChanMsgCbHolder;
 	std::vector<pattern_message_callback_holder_t> _vPatMsgCbHolder;
 

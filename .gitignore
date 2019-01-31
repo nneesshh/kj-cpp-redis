@@ -41,9 +41,3 @@
 *.ilk
 *.db
 *.opendb
-
-build/\.vs/
-
-lib/Debug/
-
-lib/Release/

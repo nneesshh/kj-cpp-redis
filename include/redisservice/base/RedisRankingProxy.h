@@ -4,7 +4,7 @@
 #include <map>
 #include <vector>
 
-#include "platform_types.h"
+#include "redis_extern.h"
 #include "redis_service_def.h"
 #include "IRedisService.h"
 

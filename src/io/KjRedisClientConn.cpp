@@ -4,15 +4,8 @@
 //------------------------------------------------------------------------------
 #include "KjRedisClientConn.hpp"
 
-#pragma push_macro("ERROR")
-#undef ERROR
-#pragma push_macro("VOID")
-#undef VOID
-
+#include "servercore/capnp/kj/windows-sanity.h"
 #include "servercore/capnp/kj/debug.h"
-
-#pragma pop_macro("ERROR")
-#pragma pop_macro("VOID")
 
 #include <time.h>
 

@@ -1,20 +1,20 @@
 #pragma once
 //------------------------------------------------------------------------------
 /**
-@class CKjRedisSubscriberWorkQueue
+	@class CKjRedisSubscriberWorkQueue
 
-(C) 2016 n.lee
+	(C) 2016 n.lee
 */
-#include <deque>
-#include <mutex>
-#include <thread>
+#include <memory>
+
+#include "servercore/base/IServerCore.h"
 
 #include "base/concurrent/readerwriterqueue.h"
+
 #include "base/redis_service_def.h"
 #include "base/IRedisService.h"
 
-#include "io/KjSimpleIoContext.hpp"
-#include "io/KjSimpleThreadIoContext.hpp"
+class CRedisSubscriber;
 
 //------------------------------------------------------------------------------
 /**
@@ -23,7 +23,7 @@
 class CKjRedisSubscriberWorkQueue : public kj::TaskSet::ErrorHandler {
 public:
 	explicit CKjRedisSubscriberWorkQueue(
-		kj::Own<KjSimpleIoContext> rootContext,
+		CRedisSubscriber *pRedisHandle,
 		redis_stub_param_t& param,
 		const std::function<void(std::string&, std::string&)>& workCb1,
 		const std::function<void(std::string&, std::string&, std::string&)>& workCb2);
@@ -31,6 +31,8 @@ public:
 	~CKjRedisSubscriberWorkQueue();
 	
 	using CallbackEntry = redis_cmd_pipepline_t;
+
+	void						Run(svrcore_pipeworker_t *worker);
 
 	bool						Add(redis_cmd_pipepline_t&& cmd);
 
@@ -45,8 +47,7 @@ public:
 	void						Finish();
 
 private:
-	void						Start();
-	void						Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream& stream, kj::WaitScope& waitScope);
+	void						InitTasks();
 
 public:
 	static redis_cmd_pipepline_t	CreateCmdPipeline(
@@ -72,16 +73,14 @@ private:
 	void taskFailed(kj::Exception&& exception) override;
 
 private:
-	kj::Own<KjSimpleIoContext> _rootContext;
+	CRedisSubscriber *_refRedisHandle;
 	redis_stub_param_t& _refParam;
 	const std::function<void(std::string&, std::string&)>& _refWorkCb1;
 	const std::function<void(std::string&, std::string&, std::string&)>& _refWorkCb2;
 
-	bool _done = false;
+	volatile bool _done = false;
+	volatile bool _finished = false;
 	moodycamel::ReaderWriterQueue<CallbackEntry> _callbacks;
-
-	//! threads
-	kj::AsyncIoProvider::PipeThread _pipeThread;
 
 public:
 	char _opCodeSend = 0;

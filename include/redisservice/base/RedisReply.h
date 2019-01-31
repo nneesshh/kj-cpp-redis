@@ -12,7 +12,7 @@
 #include <functional>
 #include <stdint.h>
 
-#include "platform_types.h"
+#include "redis_extern.h"
 
 class CRedisReply;
 using redis_reply_cb_t = std::function<void(CRedisReply&&)>;

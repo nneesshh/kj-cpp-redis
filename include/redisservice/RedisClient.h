@@ -5,9 +5,7 @@
 
 (C) 2016 n.lee
 */
-#include "base/IRedisService.h"
-
-#include "io/RedisTrunkQueue.h"
+#include "io/RedisClientTrunkQueue.hpp"
 #include "io/KjRedisClientWorkQueue.hpp"
 
 #include "RedisCommandBuilder.h"
@@ -16,10 +14,10 @@
 /**
 @brief CRedisClient
 */
-class CRedisClient : public IRedisClient {
+class MY_REDIS_EXTERN  CRedisClient : public IRedisClient {
 public:
-	explicit CRedisClient(kj::Own<KjSimpleIoContext> rootContext, redis_stub_param_t& param);
-	virtual ~CRedisClient();
+	explicit CRedisClient(redis_stub_param_t& param);
+	virtual ~CRedisClient() noexcept;
 
 public:
 	virtual void				RunOnce() override {
@@ -204,12 +202,20 @@ private:
 		_singleCommand.resize(0);
 	}
 
-private:
+	void						StartPipeWorker();
+
+public:
 	redis_stub_param_t& _refParam;
 
-	CRedisTrunkQueuePtr _trunkQueue;
+	CRedisClientTrunkQueuePtr _trunkQueue;
 	CKjRedisClientWorkQueuePtr _workQueue;
 
+	//! threads
+	svrcore_pipeworker_t *_refPipeWorker = nullptr;
+	char _trunkOpCodeSend = 0;
+	char _trunkOpCodeRecvBuf[1024];
+
+private:
 	std::string _singleCommand;
 	std::string _allCommands;
 	int _builtNum = 0;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../platform_types.h"
+#include "../redis_extern.h"
 #include "rdb_parser_def.h"
 
 MY_REDIS_EXTERN rdb_parser_t *  create_rdb_parser();

@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <tuple>
 
-#include "platform_types.h"
+#include "redis_extern.h"
 #include "redis_service_def.h"
 #include "RedisReply.h"
 

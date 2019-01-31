@@ -5,9 +5,10 @@
 
 (C) 2016 n.lee
 */
+#include "servercore/base/IServerCore.h"
 #include "base/IRedisService.h"
 
-#include "KjTcpConnection.hpp"
+#include "KjRedisTcpConn.hpp"
 #include "KjReplyBuilder.hpp"
 #include "KjRedisSubscriberWorkQueue.hpp"
 
@@ -23,7 +24,7 @@ class KjRedisSubscriberConn : public kj::Refcounted, public kj::TaskSet::ErrorHa
 public:
 	//! ctor & dtor
 	explicit KjRedisSubscriberConn(
-		kj::Own<KjSimpleThreadIoContext> tioContext,
+		kj::Own<KjPipeEndpointIoContext> endpointContext,
 		redis_stub_param_t& param,
 		const std::function<void(std::string&, std::string&)>& workCb1,
 		const std::function<void(std::string&, std::string&, std::string&)>& workCb2);
@@ -34,9 +35,9 @@ public:
 	KjRedisSubscriberConn(const KjRedisSubscriberConn&) = delete;
 	KjRedisSubscriberConn& operator=(const KjRedisSubscriberConn&) = delete;
 
-	virtual void OnClientConnect(KjTcpConnection&, uint64_t);
-	virtual void OnClientDisconnect(KjTcpConnection&, uint64_t);
-	virtual void OnClientReceive(KjTcpConnection&, bip_buf_t& bb);
+	virtual void OnClientConnect(KjRedisTcpConn&, uint64_t);
+	virtual void OnClientDisconnect(KjRedisTcpConn&, uint64_t);
+	virtual void OnClientReceive(KjRedisTcpConn&, bip_buf_t& bb);
 
 public:
 	void Open();
@@ -78,9 +79,10 @@ private:
 	void taskFailed(kj::Exception&& exception) override;
 
 private:
-	kj::Own<KjSimpleThreadIoContext> _tioContext;
-	kj::Own<kj::TaskSet> _tasks;
+	kj::Own<KjPipeEndpointIoContext> _endpointContext;
 	redis_stub_param_t& _refParam;
+	kj::Own<kj::TaskSet> _tsCommon;
+
 	const std::function<void(std::string&, std::string&)>& _refWorkCb1;
 	const std::function<void(std::string&, std::string&, std::string&)>& _refWorkCb2;
 
@@ -90,7 +92,7 @@ private:
 
 	int _committing_num = 0;
 
-	KjTcpConnection _kjconn;
+	KjRedisTcpConn _kjconn;
 	KjReplyBuilder _builder;
 
 	bool _bDelayReconnecting = false;
