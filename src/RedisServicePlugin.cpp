@@ -4,7 +4,7 @@
 //------------------------------------------------------------------------------
 #include "RedisService.h"
 
-#include "base/platform_types.h"
+#include "base/redis_extern.h"
 
 #ifdef _MSC_VER
 #ifdef _DEBUG
@@ -14,13 +14,13 @@
 
 extern "C" {
 	MY_REDIS_EXTERN IRedisService *
-		GetPlugin(redis_stub_param_t *param) {
-		return new CRedisService(param);
+		GetPlugin(void *servercore, redis_stub_param_t *param) {
+		return new CRedisService(servercore, param);
 	}
 
 	MY_REDIS_EXTERN IRedisService *
-		GetClass(redis_stub_param_t *param) {
-		return GetPlugin(param);
+		GetClass(void *servercore, redis_stub_param_t *param) {
+		return GetPlugin(servercore, param);
 	}
 }
 

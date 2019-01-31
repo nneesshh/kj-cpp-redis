@@ -4,22 +4,28 @@
 //------------------------------------------------------------------------------
 #include "KjRedisSubscriberWorkQueue.hpp"
 
+#include <future>
+#include "../RedisRootContextDef.hpp"
+#include "../RedisSubscriber.h"
+
 #include "KjRedisSubscriberConn.hpp"
 
-struct redis_subscriber_thread_worker_t {
-	kj::Own<KjSimpleThreadIoContext>	_tioContext;
-	kj::Own<kj::TaskSet>				_tasks;
-	kj::Own<KjRedisSubscriberConn>		_conn;
+struct redis_subscriber_thread_env_t {
+	svrcore_pipeworker_t           *worker;
+
+	kj::Own<kj::TaskSet>            tasks;
+	kj::Own<KjRedisSubscriberConn>  conn;
 };
+static thread_local redis_subscriber_thread_env_t *stl_env = nullptr;
 
 static kj::Promise<void>
-check_quit_loop(CKjRedisSubscriberWorkQueue& q, redis_subscriber_thread_worker_t& worker, kj::PromiseFulfiller<void> *fulfiller) {
+check_quit_loop(CKjRedisSubscriberWorkQueue& q, redis_subscriber_thread_env_t& env, kj::PromiseFulfiller<void> *fulfiller) {
 	if (!q.IsDone()) {
 		// "delay and check quit loop" -- wait 500 ms
-		return worker._tioContext->GetTimer().afterDelay(500 * kj::MICROSECONDS)
-			.then([&q, &worker, fulfiller]() {
+		return env.worker->endpointContext->GetTimer().afterDelay(500 * kj::MICROSECONDS)
+			.then([&q, &env, fulfiller]() {
 			// loop
-			return check_quit_loop(q, worker, fulfiller);
+			return check_quit_loop(q, env, fulfiller);
 		});
 	}
 
@@ -29,24 +35,24 @@ check_quit_loop(CKjRedisSubscriberWorkQueue& q, redis_subscriber_thread_worker_t
 }
 
 static kj::Promise<void>
-read_pipe_loop(CKjRedisSubscriberWorkQueue& q, redis_subscriber_thread_worker_t& worker, kj::AsyncIoStream& stream) {
+read_pipe_loop(CKjRedisSubscriberWorkQueue& q, redis_subscriber_thread_env_t& env, kj::AsyncIoStream& stream) {
 
 	if (!q.IsDone()) {
 		return stream.tryRead(&q._opCodeRecvBuf, 1, 1024)
-			.then([&q, &worker, &stream](size_t amount) {
+			.then([&q, &env, &stream](size_t amount) {
 			//
 			// Get next work item.
 			//
 			int nCount = 0;
 			while (q.Callbacks().try_dequeue(q._opCmd)) {
-				worker._conn->Send(q._opCmd);
+				env.conn->Send(q._opCmd);
 				++nCount;
 			}
 
 			if (nCount > 0) {
-				worker._conn->Commit();
+				env.conn->Commit();
 			}
-			return read_pipe_loop(q, worker, stream);
+			return read_pipe_loop(q, env, stream);
 		});
 	}
 	return kj::READY_NOW;
@@ -57,17 +63,16 @@ read_pipe_loop(CKjRedisSubscriberWorkQueue& q, redis_subscriber_thread_worker_t&
 
 */
 CKjRedisSubscriberWorkQueue::CKjRedisSubscriberWorkQueue(
-	kj::Own<KjSimpleIoContext> rootContext,
+	CRedisSubscriber *pRedisHandle,
 	redis_stub_param_t& param,
 	const std::function<void(std::string&, std::string&)>& workCb1,
 	const std::function<void(std::string&, std::string&, std::string&)>& workCb2)
-	:_rootContext(kj::addRef(*rootContext))
+	: _refRedisHandle(pRedisHandle)
 	, _refParam(param)
 	, _refWorkCb1(workCb1)
 	, _refWorkCb2(workCb2)
 	, _callbacks(256) {
-	//
-	Start();
+
 }
 
 //------------------------------------------------------------------------------
@@ -75,8 +80,33 @@ CKjRedisSubscriberWorkQueue::CKjRedisSubscriberWorkQueue(
 
 */
 CKjRedisSubscriberWorkQueue::~CKjRedisSubscriberWorkQueue() {
-	_pipeThread.pipe = nullptr;
-	_pipeThread.thread = nullptr;
+	
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+void
+CKjRedisSubscriberWorkQueue::Run(svrcore_pipeworker_t *worker) {
+	//
+	stl_env = new redis_subscriber_thread_env_t;
+	stl_env->worker = worker;
+	stl_env->tasks = redis_get_servercore()->NewTaskSet(*this);
+	stl_env->conn = kj::heap<KjRedisSubscriberConn>(kj::addRef(*worker->endpointContext), _refParam, _refWorkCb1, _refWorkCb2);
+
+	//
+	InitTasks();
+
+	// thread dispose
+	stl_env->conn->Close();
+	stl_env->conn = nullptr;
+	stl_env->tasks = nullptr;
+
+	delete stl_env;
+	stl_env = nullptr;
+
+	_finished = true;
 }
 
 //------------------------------------------------------------------------------
@@ -101,17 +131,9 @@ CKjRedisSubscriberWorkQueue::Add(redis_cmd_pipepline_t&& cmd) {
 		return false;
 	}
 
-	// write opcode to pipe
+	// write opcode to trunk pipe
 	++_opCodeSend;
-
-	// pipe write maybe trigger exception at once, so we must catch it manually
-	KJ_IF_MAYBE(e, kj::runCatchingExceptions([this]() {
-		_pipeThread.pipe->write((const void *)&_opCodeSend, 1);
-	})) {
-		fprintf(stderr, "[CKjRedisSubscriberWorkQueue::Add()] desc(%s) -- pause!!!\n", e->getDescription().cStr());
-		system("pause");
-		kj::throwFatalException(kj::mv(*e));
-	}
+	redis_get_servercore()->PipeNotify(*_refRedisHandle->_refPipeWorker->pipeThread.pipe.get(), _opCodeSend);
 	return true;
 }
 
@@ -126,10 +148,10 @@ CKjRedisSubscriberWorkQueue::Finish() {
 	//
 	_done = true;
 
-	// join
-//  	if (_pipeThread.thread->joinable()) {
-// 		_pipeThread.thread->join();
-//  	}
+	// wait until finished
+	while (!_finished) {
+		util_sleep(10);
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -137,49 +159,27 @@ CKjRedisSubscriberWorkQueue::Finish() {
 
 */
 void
-CKjRedisSubscriberWorkQueue::Start() {
-	//
-	_pipeThread = _rootContext->NewPipeThread(
-		[this](kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream& stream, kj::WaitScope& waitScope) {
-		//
-		Run(ioProvider, stream, waitScope);
-	});
-}
-
-//------------------------------------------------------------------------------
-/**
-
-*/
-void
-CKjRedisSubscriberWorkQueue::Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStream& stream, kj::WaitScope& waitScope) {
-	//
-	redis_subscriber_thread_worker_t worker;
-	worker._tioContext = kj::refcounted<KjSimpleThreadIoContext>(ioProvider, stream, waitScope);
-	worker._tasks = worker._tioContext->CreateTaskSet(*this);
-	worker._conn = kj::heap<KjRedisSubscriberConn>(kj::addRef(*worker._tioContext), _refParam, _refWorkCb1, _refWorkCb2);
+CKjRedisSubscriberWorkQueue::InitTasks() {
 
 	auto paf = kj::newPromiseAndFulfiller<void>();
-	worker._conn->Open();
+	stl_env->conn->Open();
 
 	// "check_quit_loop"
-	worker._tasks->add(
+	stl_env->tasks->add(
 		check_quit_loop(
 			*this,
-			worker,
+			*stl_env,
 			paf.fulfiller.get()));
 
 	// "read_pipe_loop"
-	worker._tasks->add(
+	stl_env->tasks->add(
 		read_pipe_loop(
 			*this,
-			worker,
-			stream));
+			*stl_env,
+			stl_env->worker->endpointContext->GetEndpoint()));
 
 	//
-	paf.promise.wait(worker._tioContext->GetWaitScope());
-
-	// thread dispose
-	worker._conn->Close();
+	paf.promise.wait(stl_env->worker->endpointContext->GetWaitScope());
 }
 
 //------------------------------------------------------------------------------
@@ -188,8 +188,15 @@ CKjRedisSubscriberWorkQueue::Run(kj::AsyncIoProvider& ioProvider, kj::AsyncIoStr
 */
 void
 CKjRedisSubscriberWorkQueue::taskFailed(kj::Exception&& exception) {
-	fprintf(stderr, "\n[CKjRedisSubscriberWorkQueue::taskFailed()] desc(%s) -- pause!!!\n", exception.getDescription().cStr());
-	system("pause");
+	// fatal
+	StdLog *pLog = redis_get_log();
+	if (pLog)
+		pLog->logprint(LOG_LEVEL_FATAL, "\n\n\n!!![CKjRedisSubscriberWorkQueue::taskFailed()] exception_desc(%s)!!!\n\n\n",
+			exception.getDescription().cStr());
+
+	fprintf(stderr, "\n[CKjRedisSubscriberWorkQueue::taskFailed()] desc(%s) -- pause!!!\n",
+		exception.getDescription().cStr());
+
 	kj::throwFatalException(kj::mv(exception));
 }
 

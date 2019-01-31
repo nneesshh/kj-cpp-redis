@@ -10,7 +10,15 @@
 #include <string>
 #include <functional>
 
-#include "platform_types.h"
+#ifdef _WIN32
+#pragma comment(lib, "WS2_32.Lib")
+#pragma comment(lib, "Wldap32.Lib")
+#pragma comment(lib, "IPHlpApi.Lib")
+#pragma comment(lib, "Psapi.Lib")
+#pragma comment(lib, "UserEnv.Lib")
+#endif
+
+#include "redis_extern.h"
 #include "RedisReply.h"
 
 #ifdef __cplusplus 
@@ -26,13 +34,13 @@ class IRedisSubscriber;
 
 //------------------------------------------------------------------------------
 /**
-@brief IRedisService
+	@brief IRedisService
 */
 class MY_REDIS_EXTERN IRedisService {
 public:
-	virtual ~IRedisService() {};
+	virtual ~IRedisService() noexcept {};
 
-	virtual void				RunOnce() = 0;
+	virtual void				OnUpdate() = 0;
 
 	virtual IRedisClient&		Client() = 0;
 	virtual IRedisSubscriber&	Subscriber() = 0;
@@ -42,9 +50,9 @@ public:
 	virtual void				Shutdown() = 0;
 };
 
-class IRedisClient {
+class MY_REDIS_EXTERN IRedisClient {
 public:
-	virtual ~IRedisClient() {};
+	virtual ~IRedisClient() noexcept {};
 
 	virtual void				RunOnce() = 0;
 
@@ -97,9 +105,9 @@ public:
 
 };
 
-class IRedisSubscriber {
+class MY_REDIS_EXTERN IRedisSubscriber {
 public:
-	virtual ~IRedisSubscriber() {};
+	virtual ~IRedisSubscriber() noexcept {};
 
 	using channel_message_cb_t = std::function<void(const std::string& chan, const std::string& msg)>;
 	using pattern_message_cb_t = std::function<void(const std::string& pat, const std::string& chan, const std::string& msg)>;

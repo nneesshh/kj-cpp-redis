@@ -5,9 +5,9 @@
 #include "RedisClient.h"
 
 #include <future>
+#include "RedisRootContextDef.hpp"
 
 #include "base/RedisError.h"
-#include "RedisService.h"
 
 #ifdef _MSC_VER
 #ifdef _DEBUG
@@ -22,23 +22,26 @@
 /**
 
 */
-CRedisClient::CRedisClient(kj::Own<KjSimpleIoContext> rootContext, redis_stub_param_t& param)
+CRedisClient::CRedisClient(redis_stub_param_t& param)
 	: _refParam(param) {
 	//
-	_trunkQueue = std::make_shared<CRedisTrunkQueue>();
-	_workQueue = std::make_shared<CKjRedisClientWorkQueue>(kj::addRef(*rootContext), param);
+	_workQueue = std::make_shared<CKjRedisClientWorkQueue>(this, param);
+	_trunkQueue = std::make_shared<CRedisClientTrunkQueue>(this);
 
 	//
 	_singleCommand.reserve(SINGLE_COMMAND_RESERVE_SIZE);
 	_allCommands.reserve(ALL_COMMANDS_RESERVE_SIZE);
+
+	//
+	StartPipeWorker();
 }
 
 //------------------------------------------------------------------------------
 /**
 
 */
-CRedisClient::~CRedisClient() {
-	
+CRedisClient::~CRedisClient() noexcept {
+	_refPipeWorker = nullptr;
 }
 
 //------------------------------------------------------------------------------
@@ -117,6 +120,24 @@ void
 CRedisClient::Shutdown() {
 	_workQueue->Finish();
 	_trunkQueue->Close();
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+void
+CRedisClient::StartPipeWorker() {
+	// create pipe thread
+	_refPipeWorker = redis_get_servercore()->NewPipeWorker(
+		"redis client pipeworker",
+		_trunkOpCodeRecvBuf,
+		sizeof(_trunkOpCodeRecvBuf),
+		[this](size_t amount) { _trunkQueue->RunOnce();	},
+		[this](svrcore_pipeworker_t *worker) {
+		// work
+		_workQueue->Run(worker);
+	});
 }
 
 /** -- EOF -- **/

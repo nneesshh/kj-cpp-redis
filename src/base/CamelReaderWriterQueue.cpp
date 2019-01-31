@@ -9,19 +9,6 @@
 # include <windows.h>
 #endif
 
-static void
-util_sleep(unsigned int milliseconds) {
-#if defined(WIN32) || defined(_WIN32)
-	Sleep(milliseconds);
-#else
-	int seconds = milliseconds / 1000;
-	int useconds = (milliseconds % 1000) * 1000;
-
-	sleep(seconds);
-	usleep(useconds);
-#endif
-}
-
 //------------------------------------------------------------------------------
 /**
 

@@ -1,5 +1,5 @@
 #pragma once
-#include <stdlib.h>
+#include <stdint.h>
 
 #ifdef _MSC_VER /* msvc */
 # pragma warning(disable : 4786)

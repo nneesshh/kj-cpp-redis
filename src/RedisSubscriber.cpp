@@ -5,9 +5,9 @@
 #include "RedisSubscriber.h"
 
 #include <future>
+#include "RedisRootContextDef.hpp"
 
 #include "base/RedisError.h"
-#include "RedisService.h"
 
 #ifdef _MSC_VER
 #ifdef _DEBUG
@@ -22,7 +22,7 @@
 /**
 
 */
-CRedisSubscriber::CRedisSubscriber(kj::Own<KjSimpleIoContext> rootContext, redis_stub_param_t& param) {
+CRedisSubscriber::CRedisSubscriber(redis_stub_param_t& param) {
 	//
 	_workCb1 = [this](std::string& chan, std::string& msg) {
 
@@ -56,24 +56,28 @@ CRedisSubscriber::CRedisSubscriber(kj::Own<KjSimpleIoContext> rootContext, redis
 	};
 
 	//
-	_trunkQueue = std::make_shared<CRedisTrunkQueue>();
 	_workQueue = std::make_shared<CKjRedisSubscriberWorkQueue>(
-		kj::addRef(*rootContext),
+		this,
 		param,
 		_workCb1,
 		_workCb2);
 
+	_trunkQueue = std::make_shared<CRedisSubscriberTrunkQueue>(this);
+
 	//
 	_singleCommand.reserve(SINGLE_COMMAND_RESERVE_SIZE);
 	_allCommands.reserve(ALL_COMMANDS_RESERVE_SIZE);
+
+	//
+	StartPipeWorker();
 }
 
 //------------------------------------------------------------------------------
 /**
 
 */
-CRedisSubscriber::~CRedisSubscriber() {
-	
+CRedisSubscriber::~CRedisSubscriber() noexcept {
+	_refPipeWorker = nullptr;
 }
 
 //------------------------------------------------------------------------------
@@ -454,6 +458,24 @@ CRedisSubscriber::BlockingCommit() {
 
 	prms->get_future().get();
 	return reply;
+}
+
+//------------------------------------------------------------------------------
+/**
+
+*/
+void
+CRedisSubscriber::StartPipeWorker() {
+	// create pipe thread
+	_refPipeWorker = redis_get_servercore()->NewPipeWorker(
+		"redis subscriber pipeworker",
+		_trunkOpCodeRecvBuf,
+		sizeof(_trunkOpCodeRecvBuf),
+		[this](size_t amount) { _trunkQueue->RunOnce();	},
+		[this](svrcore_pipeworker_t *worker) {
+		// work
+		_workQueue->Run(worker);
+	});
 }
 
 /** -- EOF -- **/

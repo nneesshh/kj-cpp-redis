@@ -4,6 +4,8 @@
 //------------------------------------------------------------------------------
 #include "RedisService.h"
 
+#include "RedisRootContextDef.hpp"
+
 #include "RedisClient.h"
 #include "RedisSubscriber.h"
 
@@ -12,8 +14,6 @@
 #define new   new(_NORMAL_BLOCK, __FILE__,__LINE__)
 #endif
 #endif
-
-static kj::Own<KjSimpleIoContext> s_rootContext = kj::refcounted<KjSimpleIoContext>();
 
 typedef std::function<int(rdb_object_t *r)> __parse_dumped_data_cb;
 
@@ -31,21 +31,24 @@ __on_got_rdb_object(rdb_object_t *r, void *payload) {
 /**
 
 */
-CRedisService::CRedisService(redis_stub_param_t *param)
+CRedisService::CRedisService(void *servercore, redis_stub_param_t *param)
 	: _param(*param) {
 	//
 	_rp = create_rdb_parser();
 
 	//
-	_redisClient = new CRedisClient(kj::addRef(*s_rootContext), _param);
-	_redisSubscriber = new CRedisSubscriber(kj::addRef(*s_rootContext), _param);
+	redis_init_servercore(servercore);
+
+	//
+	_redisClient = new CRedisClient(_param);
+	_redisSubscriber = new CRedisSubscriber(_param);
 }
 
 //------------------------------------------------------------------------------
 /**
 
 */
-CRedisService::~CRedisService() {
+CRedisService::~CRedisService() noexcept {
 
 	delete _redisClient;
 	delete _redisSubscriber;
@@ -53,7 +56,7 @@ CRedisService::~CRedisService() {
 	destroy_rdb_parser(_rp);
 
 	//
-	s_rootContext = nullptr;
+	redis_cleanup_servercore();
 }
 
 //------------------------------------------------------------------------------

@@ -10,17 +10,19 @@
 #include "base/redis_service_def.h"
 #include "base/IRedisService.h"
 
+#include "base/redis_extern.h"
+
 //------------------------------------------------------------------------------
 /**
 @brief CRedisService
 */
-class CRedisService : public IRedisService {
+class MY_REDIS_EXTERN CRedisService : public IRedisService {
 public:
-	CRedisService(redis_stub_param_t *param);
-	virtual ~CRedisService();
+	CRedisService(void *servercore, redis_stub_param_t *param);
+	virtual ~CRedisService() noexcept;
 
 public:
-	virtual void				RunOnce() override {
+	virtual void				OnUpdate() override {
 		_redisClient->RunOnce();
 		_redisSubscriber->RunOnce();
 	}

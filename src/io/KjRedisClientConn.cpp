@@ -9,16 +9,16 @@
 #pragma push_macro("VOID")
 #undef VOID
 
-#include <kj/debug.h>
+#include "servercore/capnp/kj/debug.h"
 
 #pragma pop_macro("ERROR")
 #pragma pop_macro("VOID")
 
 #include <time.h>
 
+#include "../RedisRootContextDef.hpp"
 #include "base/RedisError.h"
 #include "RedisService.h"
-
 #include "RedisCommandBuilder.h"
 
 static void 
@@ -76,11 +76,11 @@ static uint64_t s_redis_client_connid = 91110000;
 /**
 
 */
-KjRedisClientConn::KjRedisClientConn(kj::Own<KjSimpleThreadIoContext> tioContext, redis_stub_param_t& param)
-	: _tioContext(kj::mv(tioContext))
-	, _tasks(_tioContext->CreateTaskSet(*this))
+KjRedisClientConn::KjRedisClientConn(kj::Own<KjPipeEndpointIoContext> endpointContext, redis_stub_param_t& param)
+	: _endpointContext(kj::mv(endpointContext))
 	, _refParam(param)
-	, _kjconn(kj::addRef(*_tioContext), ++s_redis_client_connid) {
+	, _tsCommon(redis_get_servercore()->NewTaskSet(*this))
+	, _kjconn(kj::addRef(*_endpointContext), ++s_redis_client_connid) {
 	//
 	Init();
 }
@@ -97,16 +97,17 @@ KjRedisClientConn::~KjRedisClientConn() {
 
 */
 void
-KjRedisClientConn::OnClientConnect(KjTcpConnection&, uint64_t connid) {
-	// start read
+KjRedisClientConn::OnClientConnect(KjRedisTcpConn&, uint64_t connid) {
+	// "redis client start read op"
 	auto p1 = _kjconn.StartReadOp(
 		std::bind(&KjRedisClientConn::OnClientReceive,
 			this,
 			std::placeholders::_1,
 			std::placeholders::_2)
 	);
-	// "redis client start read op"
-	_tasks->add(kj::mv(p1));
+
+	// schedule
+	redis_get_servercore()->ScheduleTask(*_tsCommon.get(), kj::mv(p1));
 
 	// connection init
 	{
@@ -137,7 +138,7 @@ KjRedisClientConn::OnClientConnect(KjTcpConnection&, uint64_t connid) {
 
 */
 void
-KjRedisClientConn::OnClientDisconnect(KjTcpConnection&, uint64_t connid) {
+KjRedisClientConn::OnClientDisconnect(KjRedisTcpConn&, uint64_t connid) {
 
 }
 
@@ -146,7 +147,7 @@ KjRedisClientConn::OnClientDisconnect(KjTcpConnection&, uint64_t connid) {
 
 */
 void
-KjRedisClientConn::OnClientReceive(KjTcpConnection&, bip_buf_t& bb) {
+KjRedisClientConn::OnClientReceive(KjRedisTcpConn&, bip_buf_t& bb) {
 
 	try {
 		_builder.ProcessInput(bb);
@@ -232,15 +233,16 @@ KjRedisClientConn::Close() {
 */
 void
 KjRedisClientConn::Connect(const std::string& host, unsigned short port) {
-
+	// "redis client connect"
 	auto p1 = _kjconn.Connect(
 		host,
 		port,
 		std::bind(&KjRedisClientConn::OnClientConnect, this, std::placeholders::_1, std::placeholders::_2),
 		std::bind(&KjRedisClientConn::OnClientDisconnect, this, std::placeholders::_1, std::placeholders::_2)
 	);
-	// "redis client connect"
-	_tasks->add(kj::mv(p1));
+
+	// schedule
+	redis_get_servercore()->ScheduleTask(*_tsCommon.get(), kj::mv(p1));
 }
 
 //------------------------------------------------------------------------------
@@ -260,14 +262,15 @@ KjRedisClientConn&
 KjRedisClientConn::Commit() {
 
 	if (_dqCommon.size() > 0) {
+
 		// stream write maybe trigger exception at once, so we must catch it manually
 		KJ_IF_MAYBE(e, kj::runCatchingExceptions(
 			[this]() {
-			// "commit loop"
-			_tasks->add(CommitLoop());
+			// schedule -- "commit loop"
+			redis_get_servercore()->ScheduleTask(*_tsCommon.get(), CommitLoop());
 		})) {
 			taskFailed(kj::mv(*e));
-		}
+		};
 	}
 	return *this;
 }
@@ -368,15 +371,16 @@ KjRedisClientConn::DelayReconnect() {
 		fprintf(stderr, "[KjRedisClientConn::DelayReconnect()] connid(%08llu)host(%s)port(%d), reconnect after (%d) seconds...\n",
 			_kjconn.GetConnId(), _kjconn.GetHost().cStr(), _kjconn.GetPort(), nDelaySeconds);
 
-		// "reconnect"
-		auto p1 = _tioContext->AfterDelay(nDelaySeconds * kj::SECONDS)
+		// "redis client delay reconnect"
+		auto p1 = _endpointContext->AfterDelay(nDelaySeconds * kj::SECONDS)
 			.then([this]() {
 
 			_bDelayReconnecting = false;
 			return _kjconn.Reconnect();
 		});
-		// "redis client delay reconnect"
-		_tasks->add(kj::mv(p1));
+
+		// schedule
+		redis_get_servercore()->ScheduleTask(*_tsCommon.get(), kj::mv(p1));
 	}
 }
 
@@ -403,12 +407,12 @@ KjRedisClientConn::CommitLoop() {
 	}
 	else {
 		// "redis client commit loop"
-		auto p1 = _tioContext->AfterDelay(1 * kj::SECONDS)
+		auto p1 = _endpointContext->AfterDelay(1 * kj::SECONDS)
 			.then([this]() {
 
 			return CommitLoop();
 		});
-		return kj::mv(p1);
+		return p1;
 	}
 }
 
@@ -429,11 +433,10 @@ KjRedisClientConn::taskFailed(kj::Exception&& exception) {
 	fprintf(stderr, chDesc);
 	write_redis_connection_crash_error(chDesc);
 
-	// eval later to avoid destroying self task set
-	auto p1 = _tioContext->EvalForResult(
-		[this]() {
+	// schedule eval later to avoid destroying self task set
+	redis_get_servercore()->ScheduleEvalLaterFunc([this]() {
 
-		// force flush stream
+		// flush stream
 		_kjconn.FlushStream();
 
 		//
@@ -448,8 +451,6 @@ KjRedisClientConn::taskFailed(kj::Exception&& exception) {
 		//
 		DelayReconnect();
 	});
-	// "redis client conn dispose"
-	_tioContext->AddTask(kj::mv(p1));
 }
 
 /** -- EOF -- **/
